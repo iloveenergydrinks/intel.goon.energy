@@ -10,7 +10,7 @@ a:hover {
 }
 
 body, html { margin: 0; padding: 0; height: 100%; }
-body { display: flex; justify-content: center; align-items: center; min-width: 320px; min-height: 100vh; }
+body { display: flex; justify-content: center; align-items: center; min-width: 320px; min-height: 100vh; padding-top: 32px; }
 * { box-sizing: border-box; }
 
 h1 {
