@@ -180,7 +180,6 @@ export const useGameState = createStore<GameState>((set) => ({
 }))
 
 export function resetGame() {
-  const s = useGameState.getState()
   useGameState.setState({
     player: createInitialPlayer(),
     prey: createInitialPrey(),
