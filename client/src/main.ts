@@ -71,10 +71,13 @@ async function boot() {
     // Arc-driven passive tuning: narrower arc = better accuracy and further range
     const arcDegNow = state.scan.passiveArcDegrees
     const maxArc = state.scan.passiveArcMaxDegrees
+    const minArc = state.scan.passiveArcMinDegrees
     const basePassiveError = 500
     const basePassiveRange = state.scan.passiveRangeMeters
     const passivePosErrorMeters = Math.max(100, Math.round(basePassiveError * (arcDegNow / maxArc)))
-    const passiveRangeMetersEff = Math.round(basePassiveRange * (1 + 0.3 * ((maxArc - arcDegNow) / maxArc)))
+    // Effective passive range scales with arc: at minArc -> active range; at maxArc -> base passive range
+    const t = Math.max(0, Math.min(1, (arcDegNow - minArc) / (maxArc - minArc)))
+    const passiveRangeMetersEff = Math.round(state.scan.activeRangeMeters + (basePassiveRange - state.scan.activeRangeMeters) * t)
     const passiveRangePx = Math.round(passiveRangeMetersEff * PX_PER_M)
 
     // fades expired bubbles

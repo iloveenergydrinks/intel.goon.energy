@@ -84,7 +84,9 @@ export function drawRadar(gfx: Graphics, state: GameState) {
   const PX_PER_M = 1 / 40
   const maxArc = state.scan.passiveArcMaxDegrees
   const arcNow = state.scan.passiveArcDegrees
-  const passiveEffMeters = Math.round(state.scan.passiveRangeMeters * (1 + 0.3 * ((maxArc - arcNow) / maxArc)))
+  const minArc = state.scan.passiveArcMinDegrees
+  const t = Math.max(0, Math.min(1, (arcNow - minArc) / (maxArc - minArc)))
+  const passiveEffMeters = Math.round(state.scan.activeRangeMeters + (state.scan.passiveRangeMeters - state.scan.activeRangeMeters) * t)
 
   gfx.circle(player.position.x, player.position.y, state.scan.ambientRangeMeters * PX_PER_M)
   gfx.stroke({ color: 0x415a77, alpha: 0.2, width: 1 })
