@@ -51,6 +51,16 @@
           <div style="margin:0 0 4px 0;"><b>Visuals</b></div>
           <ul style="margin:0 0 6px 18px; padding:0;">
             <li>Rings: Base ranges (thin) and <i>max-if-loud</i> ranges (brighter) for Ambient, Passive, Active. Labels are shown near the rings.</li>
+            <li>Ring labels:
+              <ul style="margin:4px 0 6px 16px; padding:0;">
+                <li><b>Amb base</b>: Guaranteed Ambient hint radius; ignores arc; not NI-scaled.</li>
+                <li><b>Amb (active)</b>: Current effective Ambient radius vs target NI/size (capped).</li>
+                <li><b>Pass base</b>: Baseline Passive radius (wide-arc baseline; before arc/NI effects).</li>
+                <li><b>Pass (active)</b>: Current Passive radius after arc boost and NI/size scaling; wedge-only.</li>
+                <li><b>Act base</b>: Baseline Active ping radius (minimum exact-reveal reach).</li>
+                <li><b>Act (active)</b>: Current effective Active ping radius vs target NI/size (capped).</li>
+              </ul>
+            </li>
             <li>Arc wedge: Passive field-of-view; effective Passive ring grows as you narrow the Arc</li>
             <li>Breadcrumbs: <span style="color:#79c6ff">blue</span> = passive (approximate), <span style="color:#ffc04d">orange</span> = decoys</li>
             <li>Red circles: reveal bubbles — small (Passive ticks), large (Active ping)</li>
