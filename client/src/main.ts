@@ -130,8 +130,9 @@ async function boot() {
     // NI-influenced effective range vs prey loudness (target-loudness driven)
     const niEff = Math.max(0.01, prey.niSmooth) * 100 // 100 = baseline
     const sqrtFactor = Math.sqrt(niEff / 100)
-    const ambEff = Math.min(ambientBaseM * state.hybridCaps.ambient, ambientBaseM * sqrtFactor)
-    const actEff = Math.min(activeBaseM * state.hybridCaps.active, activeBaseM * sqrtFactor)
+    const sizeFactor = Math.max(0.8, Math.min(1.2, (prey.detectabilityBaseMeters ?? 7000) / 7000))
+    const ambEff = Math.min(ambientBaseM * state.hybridCaps.ambient, ambientBaseM * sqrtFactor * sizeFactor)
+    const actEff = Math.min(activeBaseM * state.hybridCaps.active, activeBaseM * sqrtFactor * sizeFactor)
     // Passive effective range keeps arc rule, then apply NI factor and cap to passive cap
     // Arc-driven passive tuning: narrower arc = better accuracy and further range
     const arcDegNow = state.scan.passiveArcDegrees
@@ -143,7 +144,7 @@ async function boot() {
     // Effective passive range scales with arc: at minArc -> active range; at maxArc -> base passive range
     const t = Math.max(0, Math.min(1, (arcDegNow - minArc) / (maxArc - minArc)))
     const passiveRangeMetersArc = Math.round(activeBaseM + (basePassiveRange - activeBaseM) * t)
-    const passiveEff = Math.min(passiveRangeMetersArc * state.hybridCaps.passive, passiveRangeMetersArc * sqrtFactor)
+    const passiveEff = Math.min(passiveRangeMetersArc * state.hybridCaps.passive, passiveRangeMetersArc * sqrtFactor * sizeFactor)
     const passiveRangePx = Math.round(passiveEff * PX_PER_M)
     const ambientRangePx = Math.round(ambEff * PX_PER_M)
 

@@ -112,29 +112,29 @@ export function drawRadar(gfx: Graphics, state: GameState) {
   // Hybrid visualization: show base ring and max-if-loud rings
   const niEff = Math.max(0.01, state.prey.niSmooth) * 100
   const sqrtFactor = Math.sqrt(niEff / 100)
+  const sizeFactor = Math.max(0.8, Math.min(1.2, (state.prey.detectabilityBaseMeters ?? 7000) / 7000))
   const ambBase = state.scan.ambientRangeMeters
   const pasBase = state.scan.passiveRangeMeters
   const actBase = state.scan.activeRangeMeters
-  const ambEff = Math.min(ambBase * state.hybridCaps.ambient, ambBase * sqrtFactor)
-  const actEff = Math.min(actBase * state.hybridCaps.active, actBase * sqrtFactor)
-  const pasEff = Math.min(passiveArcMeters * state.hybridCaps.passive, passiveArcMeters * sqrtFactor)
-
-  // Base rings
-  gfx.circle(player.position.x, player.position.y, ambBase * PX_PER_M)
-  gfx.stroke({ color: 0x415a77, alpha: 0.2, width: 1 })
-  // base passive ring
-  gfx.circle(player.position.x, player.position.y, pasBase * PX_PER_M)
-  gfx.stroke({ color: 0x2e86c1, alpha: 0.2, width: 1 })
-  // effective passive ring (changes with arc)
-  gfx.circle(player.position.x, player.position.y, pasEff * PX_PER_M)
-  gfx.stroke({ color: 0x2e86c1, alpha: 0.45, width: 2 })
-  gfx.circle(player.position.x, player.position.y, actBase * PX_PER_M)
-  gfx.stroke({ color: 0x91ff6a, alpha: 0.15, width: 1 })
-  // max-if-loud rings
+  const ambEff = Math.min(ambBase * state.hybridCaps.ambient, ambBase * sqrtFactor * sizeFactor)
+  const actEff = Math.min(actBase * state.hybridCaps.active, actBase * sqrtFactor * sizeFactor)
+  const pasEff = Math.min(passiveArcMeters * state.hybridCaps.passive, passiveArcMeters * sqrtFactor * sizeFactor)
+  // Draw only the currently effective rings prominently; fade the base as hints
+  // Ambient
   gfx.circle(player.position.x, player.position.y, ambEff * PX_PER_M)
-  gfx.stroke({ color: 0x415a77, alpha: 0.35, width: 1 })
+  gfx.stroke({ color: 0x5a7ea0, alpha: 0.9, width: 2 })
+  gfx.circle(player.position.x, player.position.y, ambBase * PX_PER_M)
+  gfx.stroke({ color: 0x415a77, alpha: 0.12, width: 1 })
+  // Passive
+  gfx.circle(player.position.x, player.position.y, pasEff * PX_PER_M)
+  gfx.stroke({ color: 0x2e86c1, alpha: 0.9, width: 2 })
+  gfx.circle(player.position.x, player.position.y, pasBase * PX_PER_M)
+  gfx.stroke({ color: 0x2e86c1, alpha: 0.12, width: 1 })
+  // Active
   gfx.circle(player.position.x, player.position.y, actEff * PX_PER_M)
-  gfx.stroke({ color: 0x91ff6a, alpha: 0.3, width: 1 })
+  gfx.stroke({ color: 0x91ff6a, alpha: 0.9, width: 2 })
+  gfx.circle(player.position.x, player.position.y, actBase * PX_PER_M)
+  gfx.stroke({ color: 0x91ff6a, alpha: 0.12, width: 1 })
   // ambient contacts as faint pips
   for (const a of state.detection.ambientContacts) {
     gfx.circle(a.approximatePosition.x, a.approximatePosition.y, 2)
@@ -223,15 +223,15 @@ export function updateRadarLabels(labels: { ambBase: Text; ambEff: Text; pasBase
   labels.ambBase.position.set(p.x + ambBaseR + dx, p.y - 36)
   labels.ambBase.text = 'Amb base'
   labels.ambEff.position.set(p.x + ambEffR + dx, p.y - 22)
-  labels.ambEff.text = 'Amb max-if-loud'
+  labels.ambEff.text = 'Amb (active)'
   labels.pasBase.position.set(p.x + pasBaseR + dx, p.y - 8)
   labels.pasBase.text = 'Pass base'
   labels.pasEff.position.set(p.x + pasEffR + dx, p.y + 6)
-  labels.pasEff.text = 'Pass effective'
+  labels.pasEff.text = 'Pass (active)'
   labels.actBase.position.set(p.x + actBaseR + dx, p.y + 20)
   labels.actBase.text = 'Act base'
   labels.actEff.position.set(p.x + actEffR + dx, p.y + 34)
-  labels.actEff.text = 'Act max-if-loud'
+  labels.actEff.text = 'Act (active)'
 }
 
 function drawFuzzyBlob(gfx: Graphics, p: PassiveReturn) {
