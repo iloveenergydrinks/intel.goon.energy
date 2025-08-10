@@ -18,7 +18,7 @@ h1 {
   line-height: 1.1;
 }
 
-#app { width: 1600px; margin: 0 auto; padding: 10px; text-align: left; }
+#app { width: 1600px; margin: 48px auto; padding: 10px; text-align: left;position: relative; top: 100px;}
 canvas { border: 1px solid #1b2a41; box-shadow: 0 0 0 1px #0e1626 inset; }
 
 .logo, .card, .read-the-docs { display: none; }
