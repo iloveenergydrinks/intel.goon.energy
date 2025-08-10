@@ -138,7 +138,7 @@ export function createInitialPrey(): Ship {
   }
 }
 
-export const useGameState = createStore<GameState>((set, get) => ({
+export const useGameState = createStore<GameState>((set) => ({
   player: createInitialPlayer(),
   prey: createInitialPrey(),
   zones: initialZones,

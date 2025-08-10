@@ -78,7 +78,7 @@ async function boot() {
     const passiveRangePx = Math.round(passiveRangeMetersEff * PX_PER_M)
 
     // fades expired bubbles
-    const bubbles = state.detection.revealBubbles.filter(b => now - b.createdAt < b.ttlMs)
+    const bubbles = (state.detection.revealBubbles || []).filter(b => now - b.createdAt < b.ttlMs)
 
     // ambient
     const ambient = computeAmbientContacts(player, [prey], {
@@ -185,7 +185,6 @@ async function boot() {
       }
     } else {
       // auto reset after short delay
-      const status = get().gameStatus
       const resetAt = (window as any).__resetAt || 0
       if (!resetAt) {
         ;(window as any).__resetAt = now + 2500

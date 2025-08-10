@@ -33,7 +33,7 @@ export function smoothNoise(previous: number, current: number, alpha: number): n
   return previous + (current - previous) * clampedAlpha
 }
 
-export function resolveCollisions(position: Vector2D, next: Vector2D, obstacles: ObstacleRect[]): Vector2D {
+export function resolveCollisions(_position: Vector2D, next: Vector2D, obstacles: ObstacleRect[]): Vector2D {
   // Simple axis-aligned rectangle collision: if next point lies inside, clamp by backing off movement along each axis
   let corrected = { ...next }
   for (const r of obstacles) {
@@ -60,7 +60,7 @@ export function resolveCollisions(position: Vector2D, next: Vector2D, obstacles:
 }
 
 export function resolveCollisionsWithVelocity(
-  position: Vector2D,
+  _position: Vector2D,
   next: Vector2D,
   velocity: Vector2D,
   obstacles: ObstacleRect[],
