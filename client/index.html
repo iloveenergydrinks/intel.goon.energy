@@ -18,14 +18,33 @@
       <div id="app"></div>
       <div id="tutorial" style="position: relative; top: 100px; padding: 24px;max-width:980px; color:#cfe9ff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:14px; line-height:1.5; text-align:left;">
         <h2 style="margin:0 0 8px 0; font-size:16px; color:#9ad0ff;">How to Play</h2>
-        <p style="margin:0 0 8px 0;"><b>Before you start</b>: Pick a ship in the menu. Each class changes speed/acceleration, baseline noise (how loud you are), and scan ranges.</p>
+        <p style="margin:0 0 8px 0;"><b>Before you start</b>: Pick a ship in the menu.
+          <span style="opacity:0.9;">Classes change:</span>
+          <br/>- <b>Speed/Acceleration</b> (handling)
+          <br/>- <b>Baseline Noise</b> (how loud you idle/coast)
+          <br/>- <b>Passive / Active base ranges</b> (sensor strength)
+          <br/><span style="opacity:0.9;">Rule of thumb:</span> Frigate = faster/stealthier (shorter base ranges). Capital = slower/louder (longer base ranges).</p>
         <ul style="margin:0 8px 10px 18px; padding:0;">
-          <li>Rotate: A / D</li>
-          <li>Throttle: W / S (raises Noise Index; coasting lowers it)</li>
-          <li>Passive Arc: Q / E — Narrow for more range & accuracy, widen for coverage.</li>
-          <li>Active Ping: Space — Exact positions briefly. Big reveal bubble + cooldown.</li>
-          <li>Dark Run: hold Shift (lower NI; trade power for stealth)</li>
-          <li>Zoom: Mouse wheel over the canvas (zoom in/out around your ship)</li>
+          <li><b>Rotate</b>: A / D</li>
+          <li><b>Throttle</b>: W / S — Thrust raises your <b>Noise Index (NI)</b>; coasting lowers it. Higher NI makes <i>you</i> detectable from farther away by others.</li>
+          <li><b>Passive Arc</b>: Q / E — This controls your directional scan.
+            <ul style="margin:4px 0 0 16px;">
+              <li>Arc width range: <b>30°–180°</b>.</li>
+              <li><b>Narrower arc</b> → <u>longer passive range</u> and <u>higher accuracy</u>; <b>wider arc</b> → more coverage but shorter range and fuzzier hits.</li>
+              <li>Range rule: at <b>30°</b>, Passive effective range ≈ your <b>Active base</b>; at <b>180°</b>, Passive effective range ≈ your <b>Passive base</b>.</li>
+              <li>Accuracy: returns have a positional error that scales ~<b>100–500 m</b> from narrow→wide arcs.</li>
+              <li>Cost: each Passive return emits a small <b>reveal bubble</b>. Bubble size grows with arc width (wider arc = bigger bubble). Internally throttled ~<b>1.2 s</b>.</li>
+            </ul>
+          </li>
+          <li><b>Active Ping</b>: Space — Emits a pulse revealing <b>exact</b> positions within your Active effective range.
+            <ul style="margin:4px 0 0 16px;">
+              <li><b>Cooldown</b>: ~<b>5 s</b> (see HUD bar). Contacts remain visible ~<b>1.2 s</b>.</li>
+              <li><b>Risk</b>: creates a <b>large reveal bubble</b> and briefly spikes your NI (you become much easier to detect).</li>
+              <li>Best used after Passive triangulation to confirm intercept.</li>
+            </ul>
+          </li>
+          <li><b>Dark Run</b>: hold Shift — Reduces emitted NI to help you hide; works best when coasting and inside cover.</li>
+          <li><b>Zoom</b>: Mouse wheel over the canvas — Zoom in/out around your ship (for situational awareness).</li>
         </ul>
         <p style="margin:0 0 8px 0;"><b>Objective</b>: Track with Passive + breadcrumbs; when you’re close, Ping to confirm and win. If the prey reaches the green gate before time ends, you lose.</p>
         <div style="margin:8px 0 8px 0;">
@@ -40,10 +59,16 @@
         <div style="margin:8px 0 0 0;">
           <div style="margin:0 0 4px 0;"><b>Scanning & Hybrid Detectability</b></div>
           <ul style="margin:0 0 6px 18px; padding:0;">
-            <li><b>Ambient</b> (always on): short-range hints of <i>loud</i> targets; Arc ignored</li>
-            <li><b>Passive</b> (Arc): fuzzy returns inside wedge; Arc width changes range, accuracy, and reveal cost</li>
-            <li><b>Active</b> (Ping): exact contacts briefly; high reveal risk; cooldown applies</li>
-            <li><b>Hybrid model</b>: Effective detection grows with the target’s Noise Index (louder = seen farther), capped per layer. Base rings = guaranteed range. Brighter rings = potential reach versus loud targets.</li>
+            <li><b>Ambient</b> (always on): short-range hints of <i>loud</i> targets; ignores Arc. Base ≈ your Ambient ring; louder targets can be heard up to the <i>Amb max-if-loud</i> ring.</li>
+            <li><b>Passive</b> (Arc): returns fuzzy positions inside the wedge only. Narrower arc increases the <i>Pass effective</i> ring and reduces error. Hits drop <b>blue breadcrumbs</b> (~8 s).</li>
+            <li><b>Active</b> (Ping): exact positions for a moment; large reveal pulse; obeys cooldown. Use to confirm and commit.</li>
+            <li><b>Hybrid model</b> (what the rings mean):
+              <ul style="margin:4px 0 0 16px;">
+                <li><b>Base rings</b> (thin) = guaranteed minimum range.</li>
+                <li><b>Max-if-loud rings</b> (brighter) = potential reach vs a <i>loud</i> target. Effective range scales with target NI (roughly a square-root curve) and is capped per layer (Amb ~1.5×, Pass ~1.75×, Act ~2.0× base).</li>
+                <li>Environmental zones reduce target NI, shrinking your effective reach; thrust/weapons/pings increase NI, extending it.</li>
+              </ul>
+            </li>
           </ul>
         </div>
         <p style="margin:8px 0 0 0;"><b>Tips</b>: Sweep wide to find direction, narrow Arc to triangulate, then Ping. Use zones (shadows/thermal/clutter) to cut NI and break locks.</p>
