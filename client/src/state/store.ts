@@ -108,6 +108,10 @@ export type GameState = {
     passiveRangeMeters: number
     activeRangeMeters: number
   }>
+  // Camera
+  cameraZoom: number
+  cameraZoomMin: number
+  cameraZoomMax: number
   setState: (partial: Partial<GameState> | ((s: GameState) => Partial<GameState>)) => void
   updateDetection: (partial: Partial<DetectionState>) => void
 }
@@ -187,6 +191,9 @@ export const useGameState = createStore<GameState>((set) => ({
     { id: 'cruiser', name: 'Cruiser', detectabilityBaseMeters: 8000, baseNoise: 0.26, maxSpeed: 190, accel: 170, passiveRangeMeters: 14000, activeRangeMeters: 28000 },
     { id: 'capital', name: 'Capital', detectabilityBaseMeters: 9500, baseNoise: 0.32, maxSpeed: 160, accel: 140, passiveRangeMeters: 15000, activeRangeMeters: 30000 },
   ],
+  cameraZoom: 0.55,
+  cameraZoomMin: 0.4,
+  cameraZoomMax: 1.4,
   scan: {
     ambientRangeMeters: 5000,
     passiveArcDegrees: 90,

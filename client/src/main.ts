@@ -18,6 +18,24 @@ async function boot() {
   // Build ship selection menu from state
   const menu = document.getElementById('menu') as HTMLDivElement | null
   const list = document.getElementById('ship-list') as HTMLDivElement | null
+  // Zoom with mouse wheel on canvas
+  const canvasEl = (scene.app.canvas as HTMLCanvasElement)
+  if (canvasEl) {
+    canvasEl.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault()
+        const s = get()
+        const min = s.cameraZoomMin ?? 0.4
+        const max = s.cameraZoomMax ?? 1.4
+        const step = 0.07
+        let z = (s.cameraZoom ?? 0.55) + (e.deltaY < 0 ? step : -step)
+        z = Math.max(min, Math.min(max, z))
+        set({ cameraZoom: z })
+      },
+      { passive: false },
+    )
+  }
   if (menu && list) {
     list.innerHTML = ''
     const s = get()
@@ -273,7 +291,7 @@ async function boot() {
       scene.app.renderer.height,
       gs.player.position.x,
       gs.player.position.y,
-      0.55,
+      get().cameraZoom,
       get().worldWidth,
       get().worldHeight,
     )
