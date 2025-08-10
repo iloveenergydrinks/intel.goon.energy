@@ -83,6 +83,7 @@ export type DetectionState = {
 export type GameState = {
   player: Ship
   prey: Ship
+  extras: Ship[]
   zones: EnvironmentZone[]
   obstacles: ObstacleRect[]
   worldWidth: number
@@ -175,6 +176,7 @@ export function createInitialPrey(): Ship {
 export const useGameState = createStore<GameState>((set) => ({
   player: createInitialPlayer(),
   prey: createInitialPrey(),
+  extras: [],
   zones: initialZones,
   obstacles: initialObstacles,
   worldWidth: WORLD_W,
@@ -228,9 +230,54 @@ export function resetGame() {
   useGameState.setState({
     player: createInitialPlayer(),
     prey: createInitialPrey(),
+    extras: [],
     detection: { ambientContacts: [], passiveReturns: [], activeContacts: [], revealBubbles: [], activeContactsExpiresAtMs: null, breadcrumbs: [], decoys: [] },
     gameStatus: 'playing',
     timeStartMs: performance.now(),
   })
+}
+
+export function createAIShip(
+  classId: 'frigate' | 'destroyer' | 'cruiser' | 'capital',
+  name: string,
+  x: number,
+  y: number,
+): Ship {
+  const presets = {
+    frigate: { baseNoise: 0.16, thrustNoise: 0.02, moduleNoise: 0.02, maxSpeed: 240, accel: 200, detectabilityBaseMeters: 6000 },
+    destroyer: { baseNoise: 0.22, thrustNoise: 0.03, moduleNoise: 0.03, maxSpeed: 210, accel: 180, detectabilityBaseMeters: 7000 },
+    cruiser: { baseNoise: 0.28, thrustNoise: 0.035, moduleNoise: 0.035, maxSpeed: 190, accel: 160, detectabilityBaseMeters: 8000 },
+    capital: { baseNoise: 0.34, thrustNoise: 0.04, moduleNoise: 0.04, maxSpeed: 160, accel: 140, detectabilityBaseMeters: 9500 },
+  } as const
+  const p = presets[classId]
+  return {
+    id: `${name}`,
+    name,
+    classId,
+    position: { x, y },
+    velocity: { x: 0, y: 0 },
+    headingRadians: Math.random() * Math.PI * 2,
+    baseNoise: p.baseNoise,
+    thrustNoise: p.thrustNoise,
+    weaponsNoise: 0,
+    moduleNoise: p.moduleNoise,
+    suppression: 0,
+    niRaw: 0,
+    niSmooth: 0,
+    isPlayer: false,
+    lastPingDetectedAt: null,
+    detectabilityBaseMeters: p.detectabilityBaseMeters,
+    maxSpeed: p.maxSpeed,
+    accel: p.accel,
+    scanRangeMultiplier: 1.0,
+  }
+}
+
+export function createInitialExtras(): Ship[] {
+  return [
+    createAIShip('frigate', 'Bandit-F', 2200, 400),
+    createAIShip('destroyer', 'Bandit-D', 1200, 1500),
+    createAIShip('cruiser', 'Bandit-C', 2600, 1200),
+  ]
 }
 

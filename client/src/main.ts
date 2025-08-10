@@ -86,6 +86,7 @@ async function boot() {
     // compute NI, integrate movement with collision
     const player = { ...get().player }
     const prey = { ...get().prey }
+    const extras = (get().extras ?? []).map(e => ({ ...e }))
 
     player.niRaw = computeNoiseIndexRaw(player, state.zones)
     prey.niRaw = computeNoiseIndexRaw(prey, state.zones)
@@ -94,6 +95,24 @@ async function boot() {
 
     // prey AI + collision
     updatePreyAI(prey, state.zones, state.obstacles, dtMs)
+    // simple wander for extras
+    for (const ai of extras) {
+      // drift around with small heading changes
+      ai.headingRadians += (Math.random() - 0.5) * 0.03
+      const speed = (ai.maxSpeed ?? 180) * 0.3
+      ai.velocity.x += Math.cos(ai.headingRadians) * speed * dt * 0.6
+      ai.velocity.y += Math.sin(ai.headingRadians) * speed * dt * 0.6
+      ai.velocity.x *= 0.96
+      ai.velocity.y *= 0.96
+      const next = { x: ai.position.x + ai.velocity.x * dt, y: ai.position.y + ai.velocity.y * dt }
+      let col = resolveCollisionsWithVelocity(ai.position, next, ai.velocity, state.obstacles)
+      col = requireClamp(col.nextPos, col.nextVel, state.worldWidth, state.worldHeight)
+      ai.position = { ...col.nextPos }
+      ai.velocity = { ...col.nextVel }
+      // NI for extras
+      ai.niRaw = computeNoiseIndexRaw(ai, state.zones)
+      ai.niSmooth = smoothNoise(ai.niSmooth, ai.niRaw, 0.12)
+    }
     const nextPrey = { x: prey.position.x + prey.velocity.x * dt, y: prey.position.y + prey.velocity.y * dt }
     let preyCollision = resolveCollisionsWithVelocity(prey.position, nextPrey, prey.velocity, state.obstacles)
     // clamp to world bounds
@@ -118,7 +137,7 @@ async function boot() {
     player.velocity.x = clampedPlayer.nextVel.x
     player.velocity.y = clampedPlayer.nextVel.y
 
-    set({ player, prey, timeMs: now })
+    set({ player, prey, extras, timeMs: now })
 
     // detection params (hybrid model)
     const ambientThreshold = 0.25
@@ -128,9 +147,10 @@ async function boot() {
     const passiveBaseM = state.scan.passiveRangeMeters
     const activeBaseM = state.scan.activeRangeMeters
     // NI-influenced effective range vs prey loudness (target-loudness driven)
-    const niEff = Math.max(0.01, prey.niSmooth) * 100 // 100 = baseline
+    const niEff = Math.max(0.01, Math.max(prey.niSmooth, ...extras.map(e => e.niSmooth || 0))) * 100 // use loudest target
     const sqrtFactor = Math.sqrt(niEff / 100)
-    const sizeFactor = Math.max(0.8, Math.min(1.2, (prey.detectabilityBaseMeters ?? 7000) / 7000))
+    const dominant = [prey, ...extras].reduce((best, s) => (s.niSmooth > (best?.niSmooth || -1) ? s : best), prey)
+    const sizeFactor = Math.max(0.8, Math.min(1.2, (dominant.detectabilityBaseMeters ?? 7000) / 7000))
     const ambEff = Math.min(ambientBaseM * state.hybridCaps.ambient, ambientBaseM * sqrtFactor * sizeFactor)
     const actEff = Math.min(activeBaseM * state.hybridCaps.active, activeBaseM * sqrtFactor * sizeFactor)
     // Passive effective range keeps arc rule, then apply NI factor and cap to passive cap
@@ -152,7 +172,7 @@ async function boot() {
     const bubbles = (state.detection.revealBubbles || []).filter(b => now - b.createdAt < b.ttlMs)
 
     // ambient
-    const ambient = computeAmbientContacts(player, [prey], {
+    const ambient = computeAmbientContacts(player, [prey, ...extras], {
       ambientThreshold,
       ambientRangeMeters: ambientRangePx,
       passiveArcDegrees: state.scan.passiveArcDegrees,
@@ -164,7 +184,7 @@ async function boot() {
     })
 
     // passive
-    const passive = computePassiveReturns(player, [prey], {
+    const passive = computePassiveReturns(player, [prey, ...extras], {
       ambientThreshold,
       ambientRangeMeters: ambientRangePx,
       passiveArcDegrees: state.scan.passiveArcDegrees,
@@ -196,7 +216,7 @@ async function boot() {
     const shouldPing = isQueued && !inCooldown
     let active = state.detection.activeContacts
     if (shouldPing) {
-      active = computeActiveContacts(player, [prey], {
+      active = computeActiveContacts(player, [prey, ...extras], {
         ambientThreshold,
         ambientRangeMeters: ambientRangePx,
         passiveArcDegrees: state.scan.passiveArcDegrees,
