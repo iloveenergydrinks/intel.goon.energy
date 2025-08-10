@@ -86,18 +86,33 @@ export function drawRadar(gfx: Graphics, state: GameState) {
   const arcNow = state.scan.passiveArcDegrees
   const minArc = state.scan.passiveArcMinDegrees
   const t = Math.max(0, Math.min(1, (arcNow - minArc) / (maxArc - minArc)))
-  const passiveEffMeters = Math.round(state.scan.activeRangeMeters + (state.scan.passiveRangeMeters - state.scan.activeRangeMeters) * t)
+  const passiveArcMeters = Math.round(state.scan.activeRangeMeters + (state.scan.passiveRangeMeters - state.scan.activeRangeMeters) * t)
+  // Hybrid visualization: show base ring and max-if-loud rings
+  const niEff = Math.max(0.01, state.prey.niSmooth) * 100
+  const sqrtFactor = Math.sqrt(niEff / 100)
+  const ambBase = state.scan.ambientRangeMeters
+  const pasBase = state.scan.passiveRangeMeters
+  const actBase = state.scan.activeRangeMeters
+  const ambEff = Math.min(ambBase * state.hybridCaps.ambient, ambBase * sqrtFactor)
+  const actEff = Math.min(actBase * state.hybridCaps.active, actBase * sqrtFactor)
+  const pasEff = Math.min(passiveArcMeters * state.hybridCaps.passive, passiveArcMeters * sqrtFactor)
 
-  gfx.circle(player.position.x, player.position.y, state.scan.ambientRangeMeters * PX_PER_M)
+  // Base rings
+  gfx.circle(player.position.x, player.position.y, ambBase * PX_PER_M)
   gfx.stroke({ color: 0x415a77, alpha: 0.2, width: 1 })
   // base passive ring
-  gfx.circle(player.position.x, player.position.y, state.scan.passiveRangeMeters * PX_PER_M)
+  gfx.circle(player.position.x, player.position.y, pasBase * PX_PER_M)
   gfx.stroke({ color: 0x2e86c1, alpha: 0.2, width: 1 })
   // effective passive ring (changes with arc)
-  gfx.circle(player.position.x, player.position.y, passiveEffMeters * PX_PER_M)
+  gfx.circle(player.position.x, player.position.y, pasEff * PX_PER_M)
   gfx.stroke({ color: 0x2e86c1, alpha: 0.45, width: 2 })
-  gfx.circle(player.position.x, player.position.y, state.scan.activeRangeMeters * PX_PER_M)
+  gfx.circle(player.position.x, player.position.y, actBase * PX_PER_M)
   gfx.stroke({ color: 0x91ff6a, alpha: 0.15, width: 1 })
+  // max-if-loud rings
+  gfx.circle(player.position.x, player.position.y, ambEff * PX_PER_M)
+  gfx.stroke({ color: 0x415a77, alpha: 0.35, width: 1 })
+  gfx.circle(player.position.x, player.position.y, actEff * PX_PER_M)
+  gfx.stroke({ color: 0x91ff6a, alpha: 0.3, width: 1 })
   // ambient contacts as faint pips
   for (const a of state.detection.ambientContacts) {
     gfx.circle(a.approximatePosition.x, a.approximatePosition.y, 2)
@@ -132,7 +147,7 @@ export function drawRadar(gfx: Graphics, state: GameState) {
   gfx.stroke({ color: 0x66ff99, width: 2, alpha: 0.8 })
 
   // player passive arc (filled wedge to passive range with bright outline)
-  const arcRadius = passiveEffMeters * PX_PER_M
+  const arcRadius = pasEff * PX_PER_M
   const arcDeg = state.scan.passiveArcDegrees
   const start = player.headingRadians - (arcDeg * Math.PI) / 180 / 2
   const end = player.headingRadians + (arcDeg * Math.PI) / 180 / 2
@@ -175,9 +190,19 @@ export function updateHud(text: Text, state: GameState) {
   const { player, scan } = state
   const timeLeft = Math.max(0, Math.ceil((state.timeStartMs + state.timeLimitMs - state.timeMs) / 1000))
   const status = state.gameStatus.toUpperCase()
-  const passiveEffKm = (scan.passiveRangeMeters * (1 + 0.3 * ((scan.passiveArcMaxDegrees - scan.passiveArcDegrees) / scan.passiveArcMaxDegrees))) / 1000
+  const maxArc = scan.passiveArcMaxDegrees
+  const minArc = scan.passiveArcMinDegrees
+  const t = Math.max(0, Math.min(1, (scan.passiveArcDegrees - minArc) / (maxArc - minArc)))
+  const passiveArcMeters = Math.round(scan.activeRangeMeters + (scan.passiveRangeMeters - scan.activeRangeMeters) * t)
+  const niEff = Math.max(0.01, state.prey.niSmooth) * 100
+  const sqrtFactor = Math.sqrt(niEff / 100)
+  const ambEff = Math.min(scan.ambientRangeMeters * state.hybridCaps.ambient, scan.ambientRangeMeters * sqrtFactor)
+  const pasEff = Math.min(passiveArcMeters * state.hybridCaps.passive, passiveArcMeters * sqrtFactor)
+  const actEff = Math.min(scan.activeRangeMeters * state.hybridCaps.active, scan.activeRangeMeters * sqrtFactor)
   text.text = `NI: ${player.niSmooth.toFixed(2)}  Arc: ${scan.passiveArcDegrees}°  Time: ${timeLeft}s  ${status}\n` +
-    `Ranges: A:${(scan.ambientRangeMeters/1000).toFixed(0)}km  P:${(scan.passiveRangeMeters/1000).toFixed(0)}km (eff≈${passiveEffKm.toFixed(1)}km)  Act:${(scan.activeRangeMeters/1000).toFixed(0)}km\n` +
+    `Ranges (base→max-if-loud): Amb ${Math.round(scan.ambientRangeMeters/1000)}→${Math.round(ambEff/1000)}km  ` +
+    `Pass ${Math.round(scan.passiveRangeMeters/1000)}→${Math.round(pasEff/1000)}km  ` +
+    `Act ${Math.round(scan.activeRangeMeters/1000)}→${Math.round(actEff/1000)}km\n` +
     `Ping: [Space]  Arc +/-: [Q/E]  Rotate: [A/D]  Throttle: [W/S]`
 }
 

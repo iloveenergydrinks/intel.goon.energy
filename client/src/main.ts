@@ -15,6 +15,38 @@ async function boot() {
   const set = useGameState.setState
   const controls = attachControls(get, set)
 
+  // Build ship selection menu from state
+  const menu = document.getElementById('menu') as HTMLDivElement | null
+  const list = document.getElementById('ship-list') as HTMLDivElement | null
+  if (menu && list) {
+    list.innerHTML = ''
+    const s = get()
+    for (const ship of s.availableShips) {
+      const btn = document.createElement('button')
+      btn.textContent = `${ship.name} — SPD ${ship.maxSpeed}  Noise ${ship.baseNoise.toFixed(2)}  P ${Math.round(ship.passiveRangeMeters/1000)}km  A ${Math.round(ship.activeRangeMeters/1000)}km`
+      btn.style.cssText = 'background:#122035;color:#cfe8ff;border:1px solid #1f2a44;border-radius:6px;padding:8px 10px;text-align:left;cursor:pointer;'
+      btn.onmouseenter = () => (btn.style.background = '#172844')
+      btn.onmouseleave = () => (btn.style.background = '#122035')
+      btn.onclick = () => {
+        // Apply selection to player and scan
+        const player = { ...get().player,
+          classId: ship.id,
+          baseNoise: ship.baseNoise,
+          detectabilityBaseMeters: ship.detectabilityBaseMeters,
+          maxSpeed: ship.maxSpeed,
+          accel: ship.accel,
+        }
+        const scan = { ...get().scan,
+          passiveRangeMeters: ship.passiveRangeMeters,
+          activeRangeMeters: ship.activeRangeMeters,
+        }
+        set({ player, scan, gamePhase: 'playing', timeStartMs: performance.now() })
+        menu.style.display = 'none'
+      }
+      list.appendChild(btn)
+    }
+  }
+
   let last = performance.now()
 
   scene.app.ticker.add(() => {
@@ -24,6 +56,12 @@ async function boot() {
     last = now
 
     const state = get()
+    // If still in menu, render menu frame and skip simulation
+    if (state.gamePhase === 'menu') {
+      // simple idle HUD prompt; gameplay waits for selection
+      updateHud(scene.hudText, { ...state, timeMs: now })
+      return
+    }
     // integrate player motion from controls
     controls.tick(dt)
 
@@ -64,21 +102,32 @@ async function boot() {
 
     set({ player, prey, timeMs: now })
 
-    // detection params
+    // detection params (hybrid model)
     const ambientThreshold = 0.25
     const PX_PER_M = 1 / 40
-    const ambientRangePx = Math.round(state.scan.ambientRangeMeters * PX_PER_M)
+    // Base rings
+    const ambientBaseM = state.scan.ambientRangeMeters
+    const passiveBaseM = state.scan.passiveRangeMeters
+    const activeBaseM = state.scan.activeRangeMeters
+    // NI-influenced effective range vs prey loudness (target-loudness driven)
+    const niEff = Math.max(0.01, prey.niSmooth) * 100 // 100 = baseline
+    const sqrtFactor = Math.sqrt(niEff / 100)
+    const ambEff = Math.min(ambientBaseM * state.hybridCaps.ambient, ambientBaseM * sqrtFactor)
+    const actEff = Math.min(activeBaseM * state.hybridCaps.active, activeBaseM * sqrtFactor)
+    // Passive effective range keeps arc rule, then apply NI factor and cap to passive cap
     // Arc-driven passive tuning: narrower arc = better accuracy and further range
     const arcDegNow = state.scan.passiveArcDegrees
     const maxArc = state.scan.passiveArcMaxDegrees
     const minArc = state.scan.passiveArcMinDegrees
     const basePassiveError = 500
-    const basePassiveRange = state.scan.passiveRangeMeters
+    const basePassiveRange = passiveBaseM
     const passivePosErrorMeters = Math.max(100, Math.round(basePassiveError * (arcDegNow / maxArc)))
     // Effective passive range scales with arc: at minArc -> active range; at maxArc -> base passive range
     const t = Math.max(0, Math.min(1, (arcDegNow - minArc) / (maxArc - minArc)))
-    const passiveRangeMetersEff = Math.round(state.scan.activeRangeMeters + (basePassiveRange - state.scan.activeRangeMeters) * t)
-    const passiveRangePx = Math.round(passiveRangeMetersEff * PX_PER_M)
+    const passiveRangeMetersArc = Math.round(activeBaseM + (basePassiveRange - activeBaseM) * t)
+    const passiveEff = Math.min(passiveRangeMetersArc * state.hybridCaps.passive, passiveRangeMetersArc * sqrtFactor)
+    const passiveRangePx = Math.round(passiveEff * PX_PER_M)
+    const ambientRangePx = Math.round(ambEff * PX_PER_M)
 
     // fades expired bubbles
     const bubbles = (state.detection.revealBubbles || []).filter(b => now - b.createdAt < b.ttlMs)
@@ -91,7 +140,7 @@ async function boot() {
       passiveRangeMeters: passiveRangePx,
       passivePosErrorMeters,
       passiveRevealRadiusMeters: state.scan.passiveRevealRadiusMeters,
-      activeRangeMeters: Math.round(state.scan.activeRangeMeters * PX_PER_M),
+      activeRangeMeters: Math.round(actEff * PX_PER_M),
       activeRevealRadiusMeters: state.scan.activeRevealRadiusMeters,
     })
 
@@ -103,7 +152,7 @@ async function boot() {
       passiveRangeMeters: passiveRangePx,
       passivePosErrorMeters,
       passiveRevealRadiusMeters: state.scan.passiveRevealRadiusMeters,
-      activeRangeMeters: Math.round(state.scan.activeRangeMeters * PX_PER_M),
+      activeRangeMeters: Math.round(actEff * PX_PER_M),
       activeRevealRadiusMeters: state.scan.activeRevealRadiusMeters,
     })
     // passive creates a small reveal bubble with throttle
@@ -135,7 +184,7 @@ async function boot() {
         passiveRangeMeters: passiveRangePx,
         passivePosErrorMeters,
         passiveRevealRadiusMeters: state.scan.passiveRevealRadiusMeters,
-        activeRangeMeters: Math.round(state.scan.activeRangeMeters * PX_PER_M),
+        activeRangeMeters: Math.round(actEff * PX_PER_M),
         activeRevealRadiusMeters: state.scan.activeRevealRadiusMeters,
       })
       bubbles.push(createRevealBubble(player, state.scan.activeRevealRadiusMeters / 40, 1500))

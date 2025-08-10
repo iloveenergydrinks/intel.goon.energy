@@ -21,7 +21,8 @@ export function attachControls(getState: () => GameState, setState: (partial: Pa
 
     // throttle W/S
     const thrust = keys.has('w') ? 1 : keys.has('s') ? -0.4 : 0
-    const accel = 180 * thrust
+    const accelBase = s.player.accel ?? 180
+    const accel = accelBase * thrust
     player.velocity.x += Math.cos(player.headingRadians) * accel * dt
     player.velocity.y += Math.sin(player.headingRadians) * accel * dt
     // apply drag to lower inertia
@@ -29,7 +30,7 @@ export function attachControls(getState: () => GameState, setState: (partial: Pa
     player.velocity.x -= player.velocity.x * drag * dt
     player.velocity.y -= player.velocity.y * drag * dt
     // clamp max speed
-    const maxSpeed = 220
+    const maxSpeed = s.player.maxSpeed ?? 220
     const vmag = Math.hypot(player.velocity.x, player.velocity.y)
     if (vmag > maxSpeed) {
       const scale = maxSpeed / vmag

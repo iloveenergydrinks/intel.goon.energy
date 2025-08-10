@@ -8,6 +8,13 @@
   </head>
   <body>
     <div style="display:flex; flex-direction:column; gap:16px; align-items:center; justify-content:center; padding:12px; width:100%;">
+      <div id="menu" style="position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); z-index:10;">
+        <div style="background:#0b1020; border:1px solid #1f2a44; padding:16px 20px; border-radius:8px; color:#cfe8ff; font-family:monospace; min-width:360px;">
+          <div style="font-size:18px; margin-bottom:8px;">Select your ship</div>
+          <div id="ship-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <div style="margin-top:12px; font-size:12px; opacity:0.8;">W/S throttle, A/D rotate, Q/E arc, Space ping, Shift dark-run</div>
+        </div>
+      </div>
       <div id="app"></div>
       <div id="tutorial" style="position: relative; top: 100px; padding: 24px;max-width:980px; color:#cfe9ff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:14px; line-height:1.5; text-align:left;">
         <h2 style="margin:0 0 8px 0; font-size:16px; color:#9ad0ff;">How to Play</h2>

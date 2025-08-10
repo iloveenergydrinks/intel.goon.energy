@@ -26,6 +26,7 @@ export type ObstacleRect = {
 export type Ship = {
   id: string
   name: string
+  classId?: 'frigate' | 'destroyer' | 'cruiser' | 'capital'
   position: Vector2D
   velocity: Vector2D
   headingRadians: number
@@ -39,6 +40,11 @@ export type Ship = {
   isPlayer: boolean
   lastPingDetectedAt: number | null
   lastDecoyAt?: number | null
+  // Hybrid model stats
+  detectabilityBaseMeters?: number
+  maxSpeed?: number
+  accel?: number
+  scanRangeMultiplier?: number
 }
 
 export type AmbientContact = { id: string; approximatePosition: Vector2D }
@@ -88,6 +94,20 @@ export type GameState = {
   scan: ScanState
   detection: DetectionState
   timeMs: number
+  // Hybrid scanning toggles/params
+  hybridCaps: { ambient: number; passive: number; active: number }
+  // Pre-game selection
+  gamePhase: 'menu' | 'playing'
+  availableShips: Array<{
+    id: 'frigate' | 'destroyer' | 'cruiser' | 'capital'
+    name: string
+    detectabilityBaseMeters: number
+    baseNoise: number
+    maxSpeed: number
+    accel: number
+    passiveRangeMeters: number
+    activeRangeMeters: number
+  }>
   setState: (partial: Partial<GameState> | ((s: GameState) => Partial<GameState>)) => void
   updateDetection: (partial: Partial<DetectionState>) => void
 }
@@ -104,6 +124,7 @@ export function createInitialPlayer(): Ship {
   return {
   id: 'player',
   name: 'Hunter',
+  classId: 'frigate',
   position: { x: 150, y: 150 },
   velocity: { x: 0, y: 0 },
   headingRadians: 0,
@@ -116,6 +137,10 @@ export function createInitialPlayer(): Ship {
   niSmooth: 0,
   isPlayer: true,
   lastPingDetectedAt: null,
+  detectabilityBaseMeters: 6000,
+  maxSpeed: 220,
+  accel: 180,
+  scanRangeMultiplier: 1.0,
   }
 }
 
@@ -123,6 +148,7 @@ export function createInitialPrey(): Ship {
   return {
   id: 'prey',
   name: 'Prey',
+  classId: 'destroyer',
   position: { x: 700, y: 500 },
   velocity: { x: -0.05, y: 0 },
   headingRadians: Math.PI,
@@ -135,6 +161,10 @@ export function createInitialPrey(): Ship {
   niSmooth: 0,
   isPlayer: false,
   lastPingDetectedAt: null,
+  detectabilityBaseMeters: 7000,
+  maxSpeed: 180,
+  accel: 140,
+  scanRangeMultiplier: 1.0,
   }
 }
 
@@ -149,6 +179,14 @@ export const useGameState = createStore<GameState>((set) => ({
   gameStatus: 'playing',
   timeStartMs: now(),
   timeLimitMs: 120000,
+  hybridCaps: { ambient: 1.5, passive: 1.75, active: 2.0 },
+  gamePhase: 'menu',
+  availableShips: [
+    { id: 'frigate', name: 'Frigate', detectabilityBaseMeters: 6000, baseNoise: 0.18, maxSpeed: 240, accel: 220, passiveRangeMeters: 12000, activeRangeMeters: 24000 },
+    { id: 'destroyer', name: 'Destroyer', detectabilityBaseMeters: 7000, baseNoise: 0.22, maxSpeed: 210, accel: 190, passiveRangeMeters: 13000, activeRangeMeters: 26000 },
+    { id: 'cruiser', name: 'Cruiser', detectabilityBaseMeters: 8000, baseNoise: 0.26, maxSpeed: 190, accel: 170, passiveRangeMeters: 14000, activeRangeMeters: 28000 },
+    { id: 'capital', name: 'Capital', detectabilityBaseMeters: 9500, baseNoise: 0.32, maxSpeed: 160, accel: 140, passiveRangeMeters: 15000, activeRangeMeters: 30000 },
+  ],
   scan: {
     ambientRangeMeters: 5000,
     passiveArcDegrees: 90,
