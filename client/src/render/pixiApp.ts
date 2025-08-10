@@ -12,6 +12,14 @@ export type Scene = {
   radarGfx: Graphics
   hudText: Text
   hudBars: Graphics
+  radarLabels: {
+    ambBase: Text
+    ambEff: Text
+    pasBase: Text
+    pasEff: Text
+    actBase: Text
+    actEff: Text
+  }
 }
 
 export async function createScene(canvasParent: HTMLElement, width = 1600, height = 900): Promise<Scene> {
@@ -30,6 +38,14 @@ export async function createScene(canvasParent: HTMLElement, width = 1600, heigh
   hudText.position.set(8, 8)
   const hudBars = new Graphics()
   hudBars.position.set(8, 64)
+  // Ring labels (world space)
+  const labelStyle = { fill: '#cfe8ff', fontFamily: 'monospace', fontSize: 11, dropShadow: 0 }
+  const ambBase = new Text({ text: 'Amb base', style: labelStyle })
+  const ambEff = new Text({ text: 'Amb max-if-loud', style: labelStyle })
+  const pasBase = new Text({ text: 'Pass base', style: labelStyle })
+  const pasEff = new Text({ text: 'Pass effective', style: labelStyle })
+  const actBase = new Text({ text: 'Act base', style: labelStyle })
+  const actEff = new Text({ text: 'Act max-if-loud', style: labelStyle })
 
   stage.addChild(world)
   world.addChild(zonesGfx)
@@ -37,10 +53,16 @@ export async function createScene(canvasParent: HTMLElement, width = 1600, heigh
   world.addChild(playerGfx)
   world.addChild(preyGfx)
   world.addChild(radarGfx)
+  world.addChild(ambBase)
+  world.addChild(ambEff)
+  world.addChild(pasBase)
+  world.addChild(pasEff)
+  world.addChild(actBase)
+  world.addChild(actEff)
   stage.addChild(hudText)
   stage.addChild(hudBars)
 
-  return { app, stage, world, zonesGfx, obstaclesGfx, playerGfx, preyGfx, radarGfx, hudText, hudBars }
+  return { app, stage, world, zonesGfx, obstaclesGfx, playerGfx, preyGfx, radarGfx, hudText, hudBars, radarLabels: { ambBase, ambEff, pasBase, pasEff, actBase, actEff } }
 }
 
 export function drawZones(gfx: Graphics, zones: EnvironmentZone[]) {
@@ -171,6 +193,45 @@ export function drawRadar(gfx: Graphics, state: GameState) {
     gfx.lineTo(player.position.x + Math.cos(ang) * arcRadius, player.position.y + Math.sin(ang) * arcRadius)
   }
   gfx.stroke({ color: 0x79c6ff, alpha: 0.6, width: 2 })
+}
+
+export function updateRadarLabels(labels: { ambBase: Text; ambEff: Text; pasBase: Text; pasEff: Text; actBase: Text; actEff: Text }, state: GameState) {
+  const PX_PER_M = 1 / 40
+  const p = state.player.position
+  const maxArc = state.scan.passiveArcMaxDegrees
+  const minArc = state.scan.passiveArcMinDegrees
+  const t = Math.max(0, Math.min(1, (state.scan.passiveArcDegrees - minArc) / (maxArc - minArc)))
+  const passiveArcMeters = Math.round(state.scan.activeRangeMeters + (state.scan.passiveRangeMeters - state.scan.activeRangeMeters) * t)
+  const niEff = Math.max(0.01, state.prey.niSmooth) * 100
+  const sqrtFactor = Math.sqrt(niEff / 100)
+  const ambBaseM = state.scan.ambientRangeMeters
+  const pasBaseM = state.scan.passiveRangeMeters
+  const actBaseM = state.scan.activeRangeMeters
+  const ambEffM = Math.min(ambBaseM * state.hybridCaps.ambient, ambBaseM * sqrtFactor)
+  const actEffM = Math.min(actBaseM * state.hybridCaps.active, actBaseM * sqrtFactor)
+  const pasEffM = Math.min(passiveArcMeters * state.hybridCaps.passive, passiveArcMeters * sqrtFactor)
+
+  const ambBaseR = ambBaseM * PX_PER_M
+  const ambEffR = ambEffM * PX_PER_M
+  const pasBaseR = pasBaseM * PX_PER_M
+  const pasEffR = pasEffM * PX_PER_M
+  const actBaseR = actBaseM * PX_PER_M
+  const actEffR = actEffM * PX_PER_M
+
+  // Position labels slightly to the right of each ring
+  const dx = 8
+  labels.ambBase.position.set(p.x + ambBaseR + dx, p.y - 36)
+  labels.ambBase.text = 'Amb base'
+  labels.ambEff.position.set(p.x + ambEffR + dx, p.y - 22)
+  labels.ambEff.text = 'Amb max-if-loud'
+  labels.pasBase.position.set(p.x + pasBaseR + dx, p.y - 8)
+  labels.pasBase.text = 'Pass base'
+  labels.pasEff.position.set(p.x + pasEffR + dx, p.y + 6)
+  labels.pasEff.text = 'Pass effective'
+  labels.actBase.position.set(p.x + actBaseR + dx, p.y + 20)
+  labels.actBase.text = 'Act base'
+  labels.actEff.position.set(p.x + actEffR + dx, p.y + 34)
+  labels.actEff.text = 'Act max-if-loud'
 }
 
 function drawFuzzyBlob(gfx: Graphics, p: PassiveReturn) {

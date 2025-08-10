@@ -18,19 +18,19 @@
       <div id="app"></div>
       <div id="tutorial" style="position: relative; top: 100px; padding: 24px;max-width:980px; color:#cfe9ff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:14px; line-height:1.5; text-align:left;">
         <h2 style="margin:0 0 8px 0; font-size:16px; color:#9ad0ff;">How to Play</h2>
-        <p style="margin:0 0 8px 0;"><b>Before you start</b>: Pick a ship in the menu (speed, noise, and scan ranges vary by class).</p>
+        <p style="margin:0 0 8px 0;"><b>Before you start</b>: Pick a ship in the menu. Each class changes speed/acceleration, baseline noise (how loud you are), and scan ranges.</p>
         <ul style="margin:0 8px 10px 18px; padding:0;">
           <li>Rotate: A / D</li>
           <li>Throttle: W / S (raises Noise Index; coasting lowers it)</li>
-          <li>Passive Arc: Q / E (narrower = farther + more accurate; wider = more coverage)</li>
-          <li>Active Ping: Space (crisp contacts; cooldown bar under HUD; creates a big reveal bubble)</li>
+          <li>Passive Arc: Q / E — Narrow for more range & accuracy, widen for coverage.</li>
+          <li>Active Ping: Space — Exact positions briefly. Big reveal bubble + cooldown.</li>
           <li>Dark Run: hold Shift (lower NI; trade power for stealth)</li>
         </ul>
-        <p style="margin:0 0 8px 0;"><b>Objective</b>: Use Passive + breadcrumbs to track the prey, then Active-ping when very close to win. Prey escapes at the green gate before time runs out.</p>
+        <p style="margin:0 0 8px 0;"><b>Objective</b>: Track with Passive + breadcrumbs; when you’re close, Ping to confirm and win. If the prey reaches the green gate before time ends, you lose.</p>
         <div style="margin:8px 0 8px 0;">
           <div style="margin:0 0 4px 0;"><b>Visuals</b></div>
           <ul style="margin:0 0 6px 18px; padding:0;">
-            <li>Rings: base ranges (thin) and <i>max-if-loud</i> ranges (brighter) for Ambient, Passive, Active</li>
+            <li>Rings: Base ranges (thin) and <i>max-if-loud</i> ranges (brighter) for Ambient, Passive, Active. Labels are shown near the rings.</li>
             <li>Arc wedge: Passive field-of-view; effective Passive ring grows as you narrow the Arc</li>
             <li>Breadcrumbs: <span style="color:#79c6ff">blue</span> = passive (approximate), <span style="color:#ffc04d">orange</span> = decoys</li>
             <li>Red circles: reveal bubbles — small (Passive ticks), large (Active ping)</li>
@@ -42,10 +42,10 @@
             <li><b>Ambient</b> (always on): short-range hints of <i>loud</i> targets; Arc ignored</li>
             <li><b>Passive</b> (Arc): fuzzy returns inside wedge; Arc width changes range, accuracy, and reveal cost</li>
             <li><b>Active</b> (Ping): exact contacts briefly; high reveal risk; cooldown applies</li>
-            <li><b>Hybrid model</b>: Effective detection grows with the target’s NI (louder = seen farther) but is capped per layer. Base rings show guaranteed range; brighter rings show potential range vs loud targets.</li>
+            <li><b>Hybrid model</b>: Effective detection grows with the target’s Noise Index (louder = seen farther), capped per layer. Base rings = guaranteed range. Brighter rings = potential reach versus loud targets.</li>
           </ul>
         </div>
-        <p style="margin:8px 0 0 0;"><b>Tips</b>: Sweep wide, then narrow the Arc to triangulate. Pulse Active to confirm. Use zones (shadows/thermal/clutter) to cut NI or hide.</p>
+        <p style="margin:8px 0 0 0;"><b>Tips</b>: Sweep wide to find direction, narrow Arc to triangulate, then Ping. Use zones (shadows/thermal/clutter) to cut NI and break locks.</p>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

@@ -3,7 +3,7 @@ import { resetGame, useGameState } from './state/store'
 import { clampToWorldBoundsWithVelocity as requireClamp, computeNoiseIndexRaw, resolveCollisions, resolveCollisionsWithVelocity, smoothNoise } from './systems/noise'
 import { updatePreyAI } from './ai/prey'
 import { computeActiveContacts, computeAmbientContacts, computePassiveReturns, createRevealBubble } from './systems/detection'
-import { createScene, drawRadar, drawShip, drawZones, updateHud, drawObstacles, updateCamera, drawHudBars } from './render/pixiApp'
+import { createScene, drawRadar, drawShip, drawZones, updateHud, drawObstacles, updateCamera, drawHudBars, updateRadarLabels } from './render/pixiApp'
 import { attachControls } from './input/controls'
 
 async function boot() {
@@ -264,6 +264,7 @@ async function boot() {
       scene.preyGfx.clear()
     }
     drawRadar(scene.radarGfx, get())
+    updateRadarLabels(scene.radarLabels, get())
     updateHud(scene.hudText, get())
     drawHudBars(scene.hudBars, get())
     updateCamera(
