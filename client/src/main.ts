@@ -144,8 +144,11 @@ async function boot() {
       ;(window as any).__pingQueued = false
     }
     // decay active contacts after ttl regardless
-    if (get().detection.activeContactsExpiresAtMs && now > get().detection.activeContactsExpiresAtMs) {
-      active = []
+    {
+      const expiresAt = get().detection.activeContactsExpiresAtMs
+      if (expiresAt != null && now > expiresAt) {
+        active = []
+      }
     }
 
     // update detection collections
