@@ -226,12 +226,18 @@ async function boot() {
     )
   })
 
-  // space key: queue a ping request; ticker consumes it when off cooldown
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') {
-      ;(window as any).__pingQueued = true
-    }
-  })
+  // space key: queue a ping request; prevent page scroll on Space
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault()
+        e.stopPropagation()
+        ;(window as any).__pingQueued = true
+      }
+    },
+    { capture: true, passive: false },
+  )
 }
 
 boot()
