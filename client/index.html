@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ScanGame — Layered Detection</title>
+  </head>
+  <body>
+    <div style="display:flex; flex-direction:column; gap:16px; align-items:center; justify-content:center; padding:12px; width:100%;">
+      <div id="app"></div>
+      <div id="tutorial" style="max-width:980px; color:#cfe9ff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:14px; line-height:1.5; text-align:left;">
+        <h2 style="margin:0 0 8px 0; font-size:16px; color:#9ad0ff;">How to Play</h2>
+        <ul style="margin:0 8px 10px 18px; padding:0;">
+          <li>Rotate: A / D</li>
+          <li>Throttle: W / S (raises NI; coasting lowers NI)</li>
+          <li>Passive Arc width: Q / E (changes coverage + performance)</li>
+          <li>Active Ping: Space (shows crisp contacts; cooldown bar under HUD)</li>
+          <li>Dark Run: hold Shift (lower NI; active may be limited)</li>
+        </ul>
+        <p style="margin:0 0 8px 0;"><b>Objective</b>: Track the prey using Passive + breadcrumbs, then Active-ping when very close. Prey escapes at the green gate before the timer runs out.</p>
+        <div style="margin:8px 0 8px 0;">
+          <div style="margin:0 0 4px 0;"><b>Visuals</b></div>
+          <ul style="margin:0 0 6px 18px; padding:0;">
+            <li>Rings: inner = Ambient, middle = Passive (base), thick blue = Passive (effective), outer = Active</li>
+            <li>Arc wedge: your Passive field-of-view; only targets inside can return hits</li>
+            <li>Breadcrumbs: <span style="color:#79c6ff">blue</span> = passive (approximate), <span style="color:#ffc04d">orange</span> = decoys (confirm with Active)</li>
+            <li>Red circles = reveal bubbles: small (Passive), large (Active)</li>
+          </ul>
+        </div>
+        <div style="margin:8px 0 0 0;">
+          <div style="margin:0 0 4px 0;"><b>Scanning Layers</b></div>
+          <ul style="margin:0 0 6px 18px; padding:0;">
+            <li><b>Ambient</b> (always on): short range hints; ignores Arc</li>
+            <li><b>Passive</b> (Arc-directed): returns fuzzy positions inside the wedge
+              <div style="margin:2px 0 0 0; opacity:0.9;">Narrower Arc = <i>longer</i> passive range and <i>higher</i> accuracy, with a <i>smaller</i> reveal pulse. Wider Arc = more coverage, worse accuracy, larger pulse.</div>
+            </li>
+            <li><b>Active (Ping)</b>: exact positions for a moment; big reveal pulse; NI spikes; obeys cooldown</li>
+          </ul>
+        </div>
+        <p style="margin:8px 0 0 0;"><b>Tips</b>: Search wide, then narrow the Arc and sweep to triangulate; ping to confirm. Watch NI and reveal bubbles to manage risk.</p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
