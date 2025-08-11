@@ -48,7 +48,7 @@ export type Ship = {
 }
 
 export type AmbientContact = { id: string; approximatePosition: Vector2D }
-export type PassiveReturn = { id: string; approximatePosition: Vector2D; posErrorMeters: number }
+export type PassiveReturn = { id: string; bearingRadians: number; posErrorMeters: number; snr?: number }
 export type ActiveContact = { id: string; position: Vector2D }
 
 export type SpecializedMode = 'none' | 'thermal' | 'gravitic' | 'em'

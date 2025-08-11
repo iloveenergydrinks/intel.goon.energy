@@ -119,9 +119,19 @@ export function drawRadar(gfx: Graphics, state: GameState) {
     gfx.circle(a.approximatePosition.x, a.approximatePosition.y, 2)
     gfx.fill({ color: 0x88a, alpha: 0.5 })
   }
-  // passive fuzzy blobs
+  // passive bearing rays: draw a short ray from player indicating bearing; width scales with error
   for (const p of state.detection.passiveReturns) {
-    drawFuzzyBlob(gfx, p)
+    const bearing = p.bearingRadians
+    const err = Math.max(1, p.posErrorMeters)
+    const width = Math.max(1, Math.min(10, err / 300))
+    const rayLen = 80 // short, to suggest direction not range
+    const x1 = player.position.x
+    const y1 = player.position.y
+    const x2 = x1 + Math.cos(bearing) * rayLen
+    const y2 = y1 + Math.sin(bearing) * rayLen
+    gfx.moveTo(x1, y1)
+    gfx.lineTo(x2, y2)
+    gfx.stroke({ color: 0x79c6ff, alpha: 0.7, width })
   }
   // Assist: draw a tiny SNR bar when a passive return exists near the centerline of the cone
   if (state.hudAssist && state.detection.passiveReturns.length > 0) {
@@ -163,11 +173,13 @@ export function drawRadar(gfx: Graphics, state: GameState) {
   gfx.rect(ez.x, ez.y, ez.width, ez.height)
   gfx.stroke({ color: 0x66ff99, width: 2, alpha: 0.8 })
 
-  // player passive arc: in simple HUD, scale wedge length by arc gain for intuitive feedback
+  // player passive arc: wedge length scales with effective passive range r_eff = base * (maxArc/arc)^(1/4)
   const maxArc = state.scan.passiveArcMaxDegrees
   const arcNow = state.scan.passiveArcDegrees
-  const arcGain = Math.sqrt(maxArc / Math.max(1, arcNow))
-  const arcRadius = (state.hudSimple ? pasBase * arcGain : pasBase) * PX_PER_M
+  const arcRatio = maxArc / Math.max(1, arcNow)
+  const rangeGain = Math.pow(arcRatio, 0.25)
+  const rEff = pasBase * rangeGain
+  const arcRadius = rEff * PX_PER_M
   const arcDeg = state.scan.passiveArcDegrees
   const start = player.headingRadians - (arcDeg * Math.PI) / 180 / 2
   const end = player.headingRadians + (arcDeg * Math.PI) / 180 / 2
@@ -199,6 +211,10 @@ export function updateRadarLabels(labels: { ambBase: Text; ambEff: Text; pasBase
   const ambBaseM = state.scan.ambientRangeMeters
   const pasBaseM = state.scan.passiveRangeMeters
   const actBaseM = state.scan.activeRangeMeters
+  const maxArc = state.scan.passiveArcMaxDegrees
+  const arcNow = state.scan.passiveArcDegrees
+  const arcRatio = maxArc / Math.max(1, arcNow)
+  const rEffPassive = pasBaseM * Math.pow(arcRatio, 0.25)
   const ambBaseR = ambBaseM * PX_PER_M
   const pasBaseR = pasBaseM * PX_PER_M
   const actBaseR = actBaseM * PX_PER_M
@@ -210,25 +226,14 @@ export function updateRadarLabels(labels: { ambBase: Text; ambEff: Text; pasBase
   labels.pasBase.position.set(p.x + pasBaseR + dx, p.y + 4)
   labels.pasBase.text = 'Passive ref'
   labels.pasEff.position.set(p.x + pasBaseR + dx, p.y + 18)
-  labels.pasEff.text = ''
+  labels.pasEff.text = `Passive eff ~ ${Math.round(rEffPassive/1000)}km`
   labels.actBase.position.set(p.x + actBaseR + dx, p.y + 32)
   labels.actBase.text = 'Active ref'
   labels.actEff.position.set(p.x + actBaseR + dx, p.y + 46)
   labels.actEff.text = ''
 }
 
-function drawFuzzyBlob(gfx: Graphics, p: PassiveReturn) {
-  const steps = 12
-  const baseR = Math.max(8, Math.min(40, p.posErrorMeters / 400))
-  gfx.moveTo(p.approximatePosition.x + baseR, p.approximatePosition.y)
-  for (let i = 1; i <= steps; i++) {
-    const theta = (i / steps) * Math.PI * 2
-    const r = baseR * (0.8 + Math.random() * 0.4)
-    gfx.lineTo(p.approximatePosition.x + Math.cos(theta) * r, p.approximatePosition.y + Math.sin(theta) * r)
-  }
-  gfx.closePath()
-  gfx.fill({ color: 0x79c6ff, alpha: 0.2 })
-}
+// removed fuzzy blob; passive now bearing-only
 
 export function updateHud(text: Text, state: GameState) {
   const { player, scan } = state

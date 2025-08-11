@@ -89,6 +89,10 @@ async function boot() {
     const prey = { ...get().prey }
     const extras = (get().extras ?? []).map(e => ({ ...e }))
 
+    // Apply dark run suppression to player's emissions before NI calc
+    const darkRun = state.scan.darkRunActive === true
+    player.suppression = darkRun ? 0.45 : 0
+
     player.niRaw = computeNoiseIndexRaw(player, state.zones)
     prey.niRaw = computeNoiseIndexRaw(prey, state.zones)
     player.niSmooth = smoothNoise(player.niSmooth, player.niRaw, 0.15)
@@ -164,7 +168,7 @@ async function boot() {
       passiveMaxErrorMeters: PASSIVE_MAX_ERR_M,
     })
 
-    // passive
+    // passive (bearing-only)
     const passive = computePassiveReturns(player, [prey, ...extras], {
       ambientBaseMeters: ambientBaseM,
       passiveBaseMeters: passiveBaseM,
@@ -175,21 +179,7 @@ async function boot() {
       passiveMinErrorMeters: PASSIVE_MIN_ERR_M,
       passiveMaxErrorMeters: PASSIVE_MAX_ERR_M,
     })
-    // passive creates a small reveal bubble with throttle
-    if (passive.length > 0) {
-      const throttleMs = 1200
-      if (!state.scan.lastPassiveRevealAt || now - state.scan.lastPassiveRevealAt > throttleMs) {
-        // Wider arc = bigger reveal bubble cost
-        const radius = (state.scan.passiveRevealRadiusMeters / 40) * (arcDegNow / state.scan.passiveArcMaxDegrees)
-        bubbles.push(createRevealBubble(player, radius, 800))
-        set({ scan: { ...state.scan, lastPassiveRevealAt: now } })
-      }
-      // leave breadcrumbs at approximate positions
-      const crumbs = passive.map(p => ({ x: p.approximatePosition.x, y: p.approximatePosition.y, createdAt: now, ttlMs: 8000 }))
-      const det = get().detection
-      const safeCrumbs = Array.isArray(det.breadcrumbs) ? det.breadcrumbs : []
-      set({ detection: { ...det, breadcrumbs: [...safeCrumbs, ...crumbs].slice(-40) } })
-    }
+    // passive no longer emits reveal bubbles nor leaves breadcrumbs (bearing-only intel)
 
     // active ping handling: queue on keydown, consume after cooldown; NI spike visual
     const isQueued = (window as any).__pingQueued === true
