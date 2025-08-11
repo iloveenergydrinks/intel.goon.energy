@@ -102,39 +102,18 @@ export function drawShip(gfx: Graphics, x: number, y: number, headingRad: number
 export function drawRadar(gfx: Graphics, state: GameState) {
   gfx.clear()
   const { player } = state
-  // visualization of ranges
+  // SNR visualization: draw reference rings only (base meters), not dynamic exaggerations
   const PX_PER_M = 1 / 40
-  const maxArc = state.scan.passiveArcMaxDegrees
-  const arcNow = state.scan.passiveArcDegrees
-  const minArc = state.scan.passiveArcMinDegrees
-  const t = Math.max(0, Math.min(1, (arcNow - minArc) / (maxArc - minArc)))
-  const passiveArcMeters = Math.round(state.scan.activeRangeMeters + (state.scan.passiveRangeMeters - state.scan.activeRangeMeters) * t)
-  // Hybrid visualization: show base ring and max-if-loud rings
-  const niEff = Math.max(0.01, state.prey.niSmooth) * 100
-  const sqrtFactor = Math.sqrt(niEff / 100)
-  const sizeFactor = Math.max(0.8, Math.min(1.2, (state.prey.detectabilityBaseMeters ?? 7000) / 7000))
   const ambBase = state.scan.ambientRangeMeters
   const pasBase = state.scan.passiveRangeMeters
   const actBase = state.scan.activeRangeMeters
-  const ambEff = Math.min(ambBase * state.hybridCaps.ambient, ambBase * sqrtFactor * sizeFactor)
-  const actEff = Math.min(actBase * state.hybridCaps.active, actBase * sqrtFactor * sizeFactor)
-  const pasEff = Math.min(passiveArcMeters * state.hybridCaps.passive, passiveArcMeters * sqrtFactor * sizeFactor)
-  // Draw only the currently effective rings prominently; fade the base as hints
-  // Ambient
-  gfx.circle(player.position.x, player.position.y, ambEff * PX_PER_M)
-  gfx.stroke({ color: 0x5a7ea0, alpha: 0.9, width: 2 })
+  // Reference rings (teaching aids)
   gfx.circle(player.position.x, player.position.y, ambBase * PX_PER_M)
-  gfx.stroke({ color: 0x415a77, alpha: 0.12, width: 1 })
-  // Passive
-  gfx.circle(player.position.x, player.position.y, pasEff * PX_PER_M)
-  gfx.stroke({ color: 0x2e86c1, alpha: 0.9, width: 2 })
+  gfx.stroke({ color: 0x5a7ea0, alpha: 0.3, width: 1 })
   gfx.circle(player.position.x, player.position.y, pasBase * PX_PER_M)
-  gfx.stroke({ color: 0x2e86c1, alpha: 0.12, width: 1 })
-  // Active
-  gfx.circle(player.position.x, player.position.y, actEff * PX_PER_M)
-  gfx.stroke({ color: 0x91ff6a, alpha: 0.9, width: 2 })
+  gfx.stroke({ color: 0x2e86c1, alpha: 0.35, width: 1 })
   gfx.circle(player.position.x, player.position.y, actBase * PX_PER_M)
-  gfx.stroke({ color: 0x91ff6a, alpha: 0.12, width: 1 })
+  gfx.stroke({ color: 0x91ff6a, alpha: 0.35, width: 1 })
   // ambient contacts as faint pips
   for (const a of state.detection.ambientContacts) {
     gfx.circle(a.approximatePosition.x, a.approximatePosition.y, 2)
@@ -168,8 +147,8 @@ export function drawRadar(gfx: Graphics, state: GameState) {
   gfx.rect(ez.x, ez.y, ez.width, ez.height)
   gfx.stroke({ color: 0x66ff99, width: 2, alpha: 0.8 })
 
-  // player passive arc (filled wedge to passive range with bright outline)
-  const arcRadius = pasEff * PX_PER_M
+  // player passive arc (filled wedge: show to base passive radius as reference; detection itself uses thresholds)
+  const arcRadius = pasBase * PX_PER_M
   const arcDeg = state.scan.passiveArcDegrees
   const start = player.headingRadians - (arcDeg * Math.PI) / 180 / 2
   const end = player.headingRadians + (arcDeg * Math.PI) / 180 / 2
@@ -198,40 +177,25 @@ export function drawRadar(gfx: Graphics, state: GameState) {
 export function updateRadarLabels(labels: { ambBase: Text; ambEff: Text; pasBase: Text; pasEff: Text; actBase: Text; actEff: Text }, state: GameState) {
   const PX_PER_M = 1 / 40
   const p = state.player.position
-  const maxArc = state.scan.passiveArcMaxDegrees
-  const minArc = state.scan.passiveArcMinDegrees
-  const t = Math.max(0, Math.min(1, (state.scan.passiveArcDegrees - minArc) / (maxArc - minArc)))
-  const passiveArcMeters = Math.round(state.scan.activeRangeMeters + (state.scan.passiveRangeMeters - state.scan.activeRangeMeters) * t)
-  const niEff = Math.max(0.01, state.prey.niSmooth) * 100
-  const sqrtFactor = Math.sqrt(niEff / 100)
   const ambBaseM = state.scan.ambientRangeMeters
   const pasBaseM = state.scan.passiveRangeMeters
   const actBaseM = state.scan.activeRangeMeters
-  const ambEffM = Math.min(ambBaseM * state.hybridCaps.ambient, ambBaseM * sqrtFactor)
-  const actEffM = Math.min(actBaseM * state.hybridCaps.active, actBaseM * sqrtFactor)
-  const pasEffM = Math.min(passiveArcMeters * state.hybridCaps.passive, passiveArcMeters * sqrtFactor)
-
   const ambBaseR = ambBaseM * PX_PER_M
-  const ambEffR = ambEffM * PX_PER_M
   const pasBaseR = pasBaseM * PX_PER_M
-  const pasEffR = pasEffM * PX_PER_M
   const actBaseR = actBaseM * PX_PER_M
-  const actEffR = actEffM * PX_PER_M
-
-  // Position labels slightly to the right of each ring
   const dx = 8
-  labels.ambBase.position.set(p.x + ambBaseR + dx, p.y - 36)
-  labels.ambBase.text = 'Amb base'
-  labels.ambEff.position.set(p.x + ambEffR + dx, p.y - 22)
-  labels.ambEff.text = 'Amb (active)'
-  labels.pasBase.position.set(p.x + pasBaseR + dx, p.y - 8)
-  labels.pasBase.text = 'Pass base'
-  labels.pasEff.position.set(p.x + pasEffR + dx, p.y + 6)
-  labels.pasEff.text = 'Pass (active)'
-  labels.actBase.position.set(p.x + actBaseR + dx, p.y + 20)
-  labels.actBase.text = 'Act base'
-  labels.actEff.position.set(p.x + actEffR + dx, p.y + 34)
-  labels.actEff.text = 'Act (active)'
+  labels.ambBase.position.set(p.x + ambBaseR + dx, p.y - 24)
+  labels.ambBase.text = 'Ambient ref'
+  labels.ambEff.position.set(p.x + ambBaseR + dx, p.y - 10)
+  labels.ambEff.text = ''
+  labels.pasBase.position.set(p.x + pasBaseR + dx, p.y + 4)
+  labels.pasBase.text = 'Passive ref'
+  labels.pasEff.position.set(p.x + pasBaseR + dx, p.y + 18)
+  labels.pasEff.text = ''
+  labels.actBase.position.set(p.x + actBaseR + dx, p.y + 32)
+  labels.actBase.text = 'Active ref'
+  labels.actEff.position.set(p.x + actBaseR + dx, p.y + 46)
+  labels.actEff.text = ''
 }
 
 function drawFuzzyBlob(gfx: Graphics, p: PassiveReturn) {
@@ -251,19 +215,10 @@ export function updateHud(text: Text, state: GameState) {
   const { player, scan } = state
   const timeLeft = Math.max(0, Math.ceil((state.timeStartMs + state.timeLimitMs - state.timeMs) / 1000))
   const status = state.gameStatus.toUpperCase()
-  const maxArc = scan.passiveArcMaxDegrees
-  const minArc = scan.passiveArcMinDegrees
-  const t = Math.max(0, Math.min(1, (scan.passiveArcDegrees - minArc) / (maxArc - minArc)))
-  const passiveArcMeters = Math.round(scan.activeRangeMeters + (scan.passiveRangeMeters - scan.activeRangeMeters) * t)
-  const niEff = Math.max(0.01, state.prey.niSmooth) * 100
-  const sqrtFactor = Math.sqrt(niEff / 100)
-  const ambEff = Math.min(scan.ambientRangeMeters * state.hybridCaps.ambient, scan.ambientRangeMeters * sqrtFactor)
-  const pasEff = Math.min(passiveArcMeters * state.hybridCaps.passive, passiveArcMeters * sqrtFactor)
-  const actEff = Math.min(scan.activeRangeMeters * state.hybridCaps.active, scan.activeRangeMeters * sqrtFactor)
   text.text = `NI: ${player.niSmooth.toFixed(2)}  Arc: ${scan.passiveArcDegrees}°  Time: ${timeLeft}s  ${status}\n` +
-    `Ranges (base→max-if-loud): Amb ${Math.round(scan.ambientRangeMeters/1000)}→${Math.round(ambEff/1000)}km  ` +
-    `Pass ${Math.round(scan.passiveRangeMeters/1000)}→${Math.round(pasEff/1000)}km  ` +
-    `Act ${Math.round(scan.activeRangeMeters/1000)}→${Math.round(actEff/1000)}km\n` +
+    `Reference ranges: Amb ${Math.round(scan.ambientRangeMeters/1000)}km  ` +
+    `Pass ${Math.round(scan.passiveRangeMeters/1000)}km  ` +
+    `Act ${Math.round(scan.activeRangeMeters/1000)}km\n` +
     `Ping: [Space]  Arc +/-: [Q/E]  Rotate: [A/D]  Throttle: [W/S]`
 }
 

@@ -1,14 +1,19 @@
 import type { ActiveContact, AmbientContact, PassiveReturn, Ship, Vector2D } from '../state/store'
 
+// Threshold/SNR-based detection parameters. Distances are in meters; conversion is provided via PX_PER_M.
 export type DetectionParams = {
-  ambientThreshold: number
-  ambientRangeMeters: number
-  passiveRangeMeters: number
+  PX_PER_M: number
+  // Base ranges in meters (act as reference distances where detection happens for standard target at wide arc)
+  ambientBaseMeters: number
+  passiveBaseMeters: number
+  activeBaseMeters: number
+  // Passive arc characteristics (degrees)
   passiveArcDegrees: number
-  passivePosErrorMeters: number
-  passiveRevealRadiusMeters: number
-  activeRangeMeters: number
-  activeRevealRadiusMeters: number
+  passiveArcMaxDegrees: number
+  passiveArcMinDegrees: number
+  // Passive position error bounds (in meters)
+  passiveMinErrorMeters: number
+  passiveMaxErrorMeters: number
 }
 
 export function distance(a: Vector2D, b: Vector2D): number {
@@ -29,8 +34,13 @@ function isWithinArc(source: Ship, target: Ship, arcDegrees: number): boolean {
 
 export function computeAmbientContacts(player: Ship, others: Ship[], params: DetectionParams): AmbientContact[] {
   const contacts: AmbientContact[] = []
+  const dBasePx = params.ambientBaseMeters * params.PX_PER_M
+  const threshold = 1 / Math.max(1, dBasePx * dBasePx) // ~1/(r^2)
   for (const target of others) {
-    if (distance(player.position, target.position) <= params.ambientRangeMeters && target.niSmooth >= params.ambientThreshold) {
+    const rPx = distance(player.position, target.position)
+    const sizeFactor = classSizeFactor(target)
+    const signal = (Math.max(0.01, target.niSmooth) * sizeFactor) / Math.max(1, rPx * rPx)
+    if (signal >= threshold) {
       contacts.push({ id: target.id, approximatePosition: { x: target.position.x + rand(-20, 20), y: target.position.y + rand(-20, 20) } })
     }
   }
@@ -39,24 +49,43 @@ export function computeAmbientContacts(player: Ship, others: Ship[], params: Det
 
 export function computePassiveReturns(player: Ship, others: Ship[], params: DetectionParams): PassiveReturn[] {
   const returns: PassiveReturn[] = []
+  const dBasePx = params.passiveBaseMeters * params.PX_PER_M
+  const threshold = 1 / Math.max(1, dBasePx * dBasePx) // ~1/(r^2)
+  const arcDeg = clamp(params.passiveArcDegrees, params.passiveArcMinDegrees, params.passiveArcMaxDegrees)
+  // Directivity: gain increases as arc narrows; DI = sqrt(maxArc / arcNow). Anchored so DI=1 at max arc
+  const DI = Math.sqrt(params.passiveArcMaxDegrees / Math.max(1, arcDeg))
   for (const target of others) {
-    if (!isWithinArc(player, target, params.passiveArcDegrees)) continue
-    if (distance(player.position, target.position) > params.passiveRangeMeters) continue
-    const posError = params.passivePosErrorMeters * (0.8 + Math.random() * 0.4)
-    const approximate = jitter(target.position, posError)
-    returns.push({ id: target.id, approximatePosition: approximate, posErrorMeters: posError })
+    if (!isWithinArc(player, target, arcDeg)) continue
+    const rPx = distance(player.position, target.position)
+    const sizeFactor = classSizeFactor(target)
+    const signal = (Math.max(0.01, target.niSmooth) * sizeFactor * DI) / Math.max(1, rPx * rPx)
+    if (signal >= threshold) {
+      const snr = Math.max(1, signal / threshold)
+      const minErrPx = params.passiveMinErrorMeters * params.PX_PER_M
+      const maxErrPx = params.passiveMaxErrorMeters * params.PX_PER_M
+      const baseErrPx = (minErrPx + maxErrPx) / 2
+      const posErrorPx = clamp(baseErrPx / Math.sqrt(snr), minErrPx, maxErrPx) * (0.9 + Math.random() * 0.2)
+      const approximate = jitter(target.position, posErrorPx)
+      returns.push({ id: target.id, approximatePosition: approximate, posErrorMeters: posErrorPx })
+    }
   }
   return returns
 }
 
 export function computeActiveContacts(player: Ship, others: Ship[], params: DetectionParams): ActiveContact[] {
-  const within: ActiveContact[] = []
+  const hits: ActiveContact[] = []
+  // Two-way spreading loss ~ 1/(r^4). Anchor threshold so base distance is the reference for sizeFactor=1
+  const dBasePx = params.activeBaseMeters * params.PX_PER_M
+  const threshold = 1 / Math.max(1, Math.pow(dBasePx, 4))
   for (const target of others) {
-    if (distance(player.position, target.position) <= params.activeRangeMeters) {
-      within.push({ id: target.id, position: { ...target.position } })
+    const rPx = distance(player.position, target.position)
+    const sizeFactor = classSizeFactor(target)
+    const signal = sizeFactor / Math.max(1, Math.pow(rPx, 4))
+    if (signal >= threshold) {
+      hits.push({ id: target.id, position: { ...target.position } })
     }
   }
-  return within
+  return hits
 }
 
 export function createRevealBubble(source: Ship, radius: number, lifetimeMs: number) {
@@ -75,5 +104,14 @@ function jitter(point: Vector2D, radius: number): Vector2D {
 
 function rand(min: number, max: number): number {
   return Math.random() * (max - min) + min
+}
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v))
+}
+
+function classSizeFactor(target: Ship): number {
+  const base = (target.detectabilityBaseMeters ?? 7000) / 7000
+  return Math.max(0.8, Math.min(1.2, base))
 }
 

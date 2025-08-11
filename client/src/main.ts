@@ -139,60 +139,43 @@ async function boot() {
 
     set({ player, prey, extras, timeMs: now })
 
-    // detection params (hybrid model)
-    const ambientThreshold = 0.25
+    // detection params (SNR model)
     const PX_PER_M = 1 / 40
-    // Base rings
+    const arcDegNow = state.scan.passiveArcDegrees
     const ambientBaseM = state.scan.ambientRangeMeters
     const passiveBaseM = state.scan.passiveRangeMeters
     const activeBaseM = state.scan.activeRangeMeters
-    // NI-influenced effective range vs prey loudness (target-loudness driven)
-    const niEff = Math.max(0.01, Math.max(prey.niSmooth, ...extras.map(e => e.niSmooth || 0))) * 100 // use loudest target
-    const sqrtFactor = Math.sqrt(niEff / 100)
-    const dominant = [prey, ...extras].reduce((best, s) => (s.niSmooth > (best?.niSmooth || -1) ? s : best), prey)
-    const sizeFactor = Math.max(0.8, Math.min(1.2, (dominant.detectabilityBaseMeters ?? 7000) / 7000))
-    const ambEff = Math.min(ambientBaseM * state.hybridCaps.ambient, ambientBaseM * sqrtFactor * sizeFactor)
-    const actEff = Math.min(activeBaseM * state.hybridCaps.active, activeBaseM * sqrtFactor * sizeFactor)
-    // Passive effective range keeps arc rule, then apply NI factor and cap to passive cap
-    // Arc-driven passive tuning: narrower arc = better accuracy and further range
-    const arcDegNow = state.scan.passiveArcDegrees
-    const maxArc = state.scan.passiveArcMaxDegrees
-    const minArc = state.scan.passiveArcMinDegrees
-    const basePassiveError = 500
-    const basePassiveRange = passiveBaseM
-    const passivePosErrorMeters = Math.max(100, Math.round(basePassiveError * (arcDegNow / maxArc)))
-    // Effective passive range scales with arc: at minArc -> active range; at maxArc -> base passive range
-    const t = Math.max(0, Math.min(1, (arcDegNow - minArc) / (maxArc - minArc)))
-    const passiveRangeMetersArc = Math.round(activeBaseM + (basePassiveRange - activeBaseM) * t)
-    const passiveEff = Math.min(passiveRangeMetersArc * state.hybridCaps.passive, passiveRangeMetersArc * sqrtFactor * sizeFactor)
-    const passiveRangePx = Math.round(passiveEff * PX_PER_M)
-    const ambientRangePx = Math.round(ambEff * PX_PER_M)
+    // Passive error bounds (meters). Smaller with higher SNR automatically in detection module
+    const PASSIVE_MIN_ERR_M = 150
+    const PASSIVE_MAX_ERR_M = 1200
 
     // fades expired bubbles
     const bubbles = (state.detection.revealBubbles || []).filter(b => now - b.createdAt < b.ttlMs)
 
     // ambient
     const ambient = computeAmbientContacts(player, [prey, ...extras], {
-      ambientThreshold,
-      ambientRangeMeters: ambientRangePx,
-      passiveArcDegrees: state.scan.passiveArcDegrees,
-      passiveRangeMeters: passiveRangePx,
-      passivePosErrorMeters,
-      passiveRevealRadiusMeters: state.scan.passiveRevealRadiusMeters,
-      activeRangeMeters: Math.round(actEff * PX_PER_M),
-      activeRevealRadiusMeters: state.scan.activeRevealRadiusMeters,
+      PX_PER_M,
+      ambientBaseMeters: ambientBaseM,
+      passiveBaseMeters: passiveBaseM,
+      activeBaseMeters: activeBaseM,
+      passiveArcDegrees: arcDegNow,
+      passiveArcMaxDegrees: state.scan.passiveArcMaxDegrees,
+      passiveArcMinDegrees: state.scan.passiveArcMinDegrees,
+      passiveMinErrorMeters: PASSIVE_MIN_ERR_M,
+      passiveMaxErrorMeters: PASSIVE_MAX_ERR_M,
     })
 
     // passive
     const passive = computePassiveReturns(player, [prey, ...extras], {
-      ambientThreshold,
-      ambientRangeMeters: ambientRangePx,
-      passiveArcDegrees: state.scan.passiveArcDegrees,
-      passiveRangeMeters: passiveRangePx,
-      passivePosErrorMeters,
-      passiveRevealRadiusMeters: state.scan.passiveRevealRadiusMeters,
-      activeRangeMeters: Math.round(actEff * PX_PER_M),
-      activeRevealRadiusMeters: state.scan.activeRevealRadiusMeters,
+      PX_PER_M,
+      ambientBaseMeters: ambientBaseM,
+      passiveBaseMeters: passiveBaseM,
+      activeBaseMeters: activeBaseM,
+      passiveArcDegrees: arcDegNow,
+      passiveArcMaxDegrees: state.scan.passiveArcMaxDegrees,
+      passiveArcMinDegrees: state.scan.passiveArcMinDegrees,
+      passiveMinErrorMeters: PASSIVE_MIN_ERR_M,
+      passiveMaxErrorMeters: PASSIVE_MAX_ERR_M,
     })
     // passive creates a small reveal bubble with throttle
     if (passive.length > 0) {
@@ -217,14 +200,15 @@ async function boot() {
     let active = state.detection.activeContacts
     if (shouldPing) {
       active = computeActiveContacts(player, [prey, ...extras], {
-        ambientThreshold,
-        ambientRangeMeters: ambientRangePx,
-        passiveArcDegrees: state.scan.passiveArcDegrees,
-        passiveRangeMeters: passiveRangePx,
-        passivePosErrorMeters,
-        passiveRevealRadiusMeters: state.scan.passiveRevealRadiusMeters,
-        activeRangeMeters: Math.round(actEff * PX_PER_M),
-        activeRevealRadiusMeters: state.scan.activeRevealRadiusMeters,
+        PX_PER_M,
+        ambientBaseMeters: ambientBaseM,
+        passiveBaseMeters: passiveBaseM,
+        activeBaseMeters: activeBaseM,
+        passiveArcDegrees: arcDegNow,
+        passiveArcMaxDegrees: state.scan.passiveArcMaxDegrees,
+        passiveArcMinDegrees: state.scan.passiveArcMinDegrees,
+        passiveMinErrorMeters: PASSIVE_MIN_ERR_M,
+        passiveMaxErrorMeters: PASSIVE_MAX_ERR_M,
       })
       bubbles.push(createRevealBubble(player, state.scan.activeRevealRadiusMeters / 40, 1500))
       // NI spike when pinging (briefly)
