@@ -107,13 +107,15 @@ export function drawRadar(gfx: Graphics, state: GameState) {
   const ambBase = state.scan.ambientRangeMeters
   const pasBase = state.scan.passiveRangeMeters
   const actBase = state.scan.activeRangeMeters
-  // Reference rings (teaching aids)
-  gfx.circle(player.position.x, player.position.y, ambBase * PX_PER_M)
-  gfx.stroke({ color: 0x5a7ea0, alpha: 0.3, width: 1 })
-  gfx.circle(player.position.x, player.position.y, pasBase * PX_PER_M)
-  gfx.stroke({ color: 0x2e86c1, alpha: 0.35, width: 1 })
-  gfx.circle(player.position.x, player.position.y, actBase * PX_PER_M)
-  gfx.stroke({ color: 0x91ff6a, alpha: 0.35, width: 1 })
+  // Reference rings (teaching aids) hidden in simple HUD mode
+  if (!state.hudSimple) {
+    gfx.circle(player.position.x, player.position.y, ambBase * PX_PER_M)
+    gfx.stroke({ color: 0x5a7ea0, alpha: 0.3, width: 1 })
+    gfx.circle(player.position.x, player.position.y, pasBase * PX_PER_M)
+    gfx.stroke({ color: 0x2e86c1, alpha: 0.35, width: 1 })
+    gfx.circle(player.position.x, player.position.y, actBase * PX_PER_M)
+    gfx.stroke({ color: 0x91ff6a, alpha: 0.35, width: 1 })
+  }
   // ambient contacts as faint pips
   for (const a of state.detection.ambientContacts) {
     gfx.circle(a.approximatePosition.x, a.approximatePosition.y, 2)
@@ -122,6 +124,22 @@ export function drawRadar(gfx: Graphics, state: GameState) {
   // passive fuzzy blobs
   for (const p of state.detection.passiveReturns) {
     drawFuzzyBlob(gfx, p)
+  }
+  // Assist: draw a tiny SNR bar when a passive return exists near the centerline of the cone
+  if (state.hudAssist && state.detection.passiveReturns.length > 0) {
+    const midAngle = player.headingRadians
+    const tipX = player.position.x + Math.cos(midAngle) * 36
+    const tipY = player.position.y + Math.sin(midAngle) * 36
+    // crude proxy for SNR: inverse of reported error clamped
+    const best = state.detection.passiveReturns.reduce((b, r) => (r.posErrorMeters < (b?.posErrorMeters ?? 1e9) ? r : b), state.detection.passiveReturns[0])
+    const err = Math.max(1, best.posErrorMeters)
+    const snr01 = Math.max(0, Math.min(1, 600 / err))
+    const w = 40
+    const h = 4
+    // background
+    gfx.rect(tipX - w / 2, tipY - h / 2, w, h).fill({ color: 0x0b2a49, alpha: 0.6 })
+    // foreground proportional
+    gfx.rect(tipX - w / 2, tipY - h / 2, w * snr01, h).fill({ color: 0x4dc3ff, alpha: 0.9 })
   }
   // active crisp blips
   for (const c of state.detection.activeContacts) {
@@ -147,8 +165,11 @@ export function drawRadar(gfx: Graphics, state: GameState) {
   gfx.rect(ez.x, ez.y, ez.width, ez.height)
   gfx.stroke({ color: 0x66ff99, width: 2, alpha: 0.8 })
 
-  // player passive arc (filled wedge: show to base passive radius as reference; detection itself uses thresholds)
-  const arcRadius = pasBase * PX_PER_M
+  // player passive arc: in simple HUD, scale wedge length by arc gain for intuitive feedback
+  const maxArc = state.scan.passiveArcMaxDegrees
+  const arcNow = state.scan.passiveArcDegrees
+  const arcGain = Math.sqrt(maxArc / Math.max(1, arcNow))
+  const arcRadius = (state.hudSimple ? pasBase * arcGain : pasBase) * PX_PER_M
   const arcDeg = state.scan.passiveArcDegrees
   const start = player.headingRadians - (arcDeg * Math.PI) / 180 / 2
   const end = player.headingRadians + (arcDeg * Math.PI) / 180 / 2
@@ -215,11 +236,13 @@ export function updateHud(text: Text, state: GameState) {
   const { player, scan } = state
   const timeLeft = Math.max(0, Math.ceil((state.timeStartMs + state.timeLimitMs - state.timeMs) / 1000))
   const status = state.gameStatus.toUpperCase()
-  text.text = `NI: ${player.niSmooth.toFixed(2)}  Arc: ${scan.passiveArcDegrees}°  Time: ${timeLeft}s  ${status}\n` +
-    `Reference ranges: Amb ${Math.round(scan.ambientRangeMeters/1000)}km  ` +
-    `Pass ${Math.round(scan.passiveRangeMeters/1000)}km  ` +
-    `Act ${Math.round(scan.activeRangeMeters/1000)}km\n` +
-    `Ping: [Space]  Arc +/-: [Q/E]  Rotate: [A/D]  Throttle: [W/S]`
+  const lines: string[] = []
+  lines.push(`NI: ${player.niSmooth.toFixed(2)}  Arc: ${scan.passiveArcDegrees}°  Time: ${timeLeft}s  ${status}`)
+  if (!state.hudSimple) {
+    lines.push(`Reference ranges: Amb ${Math.round(scan.ambientRangeMeters/1000)}km  Pass ${Math.round(scan.passiveRangeMeters/1000)}km  Act ${Math.round(scan.activeRangeMeters/1000)}km`)
+  }
+  lines.push(`Ping: [Space]  Arc +/-: [Q/E]  Rotate: [A/D]  Throttle: [W/S]  HUD: [H]  Assist: [J]`)
+  text.text = lines.join('\n')
 }
 
 export function drawHudBars(gfx: Graphics, state: GameState) {

@@ -113,6 +113,9 @@ export type GameState = {
   cameraZoom: number
   cameraZoomMin: number
   cameraZoomMax: number
+  // HUD options
+  hudSimple: boolean
+  hudAssist: boolean
   setState: (partial: Partial<GameState> | ((s: GameState) => Partial<GameState>)) => void
   updateDetection: (partial: Partial<DetectionState>) => void
 }
@@ -196,6 +199,8 @@ export const useGameState = createStore<GameState>((set) => ({
   cameraZoom: 0.55,
   cameraZoomMin: 0.4,
   cameraZoomMax: 1.4,
+  hudSimple: true,
+  hudAssist: true,
   scan: {
     ambientRangeMeters: 5000,
     passiveArcDegrees: 90,

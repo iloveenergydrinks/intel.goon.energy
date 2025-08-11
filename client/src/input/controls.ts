@@ -14,6 +14,8 @@ export function attachControls(getState: () => GameState, setState: (partial: Pa
     const s = getState()
     const player = { ...s.player }
     const scan = { ...s.scan }
+    const hudSimple = s.hudSimple
+    const hudAssist = s.hudAssist
 
     // rotation A/D
     if (keys.has('a')) player.headingRadians -= 2.0 * dt
@@ -48,6 +50,26 @@ export function attachControls(getState: () => GameState, setState: (partial: Pa
 
     // dark run toggle (hold)
     scan.darkRunActive = (window as any).__darkRunHeld === true
+
+    // HUD toggles: H to toggle simple HUD, J to toggle assist bar
+    if (keys.has('h')) {
+      (window as any).__h_tap = (window as any).__h_tap || 0
+      ;(window as any).__h_tap += dt
+      if ((window as any).__h_tap > 0.2) {
+        setState({ hudSimple: !hudSimple })
+        ;(window as any).__h_tap = 0
+        keys.delete('h')
+      }
+    }
+    if (keys.has('j')) {
+      (window as any).__j_tap = (window as any).__j_tap || 0
+      ;(window as any).__j_tap += dt
+      if ((window as any).__j_tap > 0.2) {
+        setState({ hudAssist: !hudAssist })
+        ;(window as any).__j_tap = 0
+        keys.delete('j')
+      }
+    }
 
     setState({ player, scan })
   }
