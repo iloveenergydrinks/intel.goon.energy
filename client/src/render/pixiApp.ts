@@ -1,5 +1,5 @@
 import { Application, Container, Graphics, Text } from 'pixi.js'
-import type { EnvironmentZone, GameState, PassiveReturn, ObstacleRect } from '../state/store'
+import type { EnvironmentZone, GameState, ObstacleRect } from '../state/store'
 
 export type Scene = {
   app: Application

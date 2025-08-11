@@ -106,11 +106,7 @@ export function isInsideRevealBubble(point: Vector2D, bubble: { x: number; y: nu
   return distance(point, bubble) <= bubble.r
 }
 
-function jitter(point: Vector2D, radius: number): Vector2D {
-  const angle = Math.random() * Math.PI * 2
-  const r = Math.random() * radius
-  return { x: point.x + Math.cos(angle) * r, y: point.y + Math.sin(angle) * r }
-}
+// jitter helper removed from passive path; keep if needed elsewhere
 
 function rand(min: number, max: number): number {
   return Math.random() * (max - min) + min
