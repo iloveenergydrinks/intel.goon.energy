@@ -107,15 +107,13 @@ export function drawRadar(gfx: Graphics, state: GameState) {
   const ambBase = state.scan.ambientRangeMeters
   const pasBase = state.scan.passiveRangeMeters
   const actBase = state.scan.activeRangeMeters
-  // Reference rings (teaching aids) hidden in simple HUD mode
-  if (!state.hudSimple) {
-    gfx.circle(player.position.x, player.position.y, ambBase * PX_PER_M)
-    gfx.stroke({ color: 0x5a7ea0, alpha: 0.3, width: 1 })
-    gfx.circle(player.position.x, player.position.y, pasBase * PX_PER_M)
-    gfx.stroke({ color: 0x2e86c1, alpha: 0.35, width: 1 })
-    gfx.circle(player.position.x, player.position.y, actBase * PX_PER_M)
-    gfx.stroke({ color: 0x91ff6a, alpha: 0.35, width: 1 })
-  }
+  // Reference rings (teaching aids)
+  gfx.circle(player.position.x, player.position.y, ambBase * PX_PER_M)
+  gfx.stroke({ color: 0x5a7ea0, alpha: 0.3, width: 1 })
+  gfx.circle(player.position.x, player.position.y, pasBase * PX_PER_M)
+  gfx.stroke({ color: 0x2e86c1, alpha: 0.35, width: 1 })
+  gfx.circle(player.position.x, player.position.y, actBase * PX_PER_M)
+  gfx.stroke({ color: 0x91ff6a, alpha: 0.35, width: 1 })
   // ambient contacts as faint pips
   for (const a of state.detection.ambientContacts) {
     gfx.circle(a.approximatePosition.x, a.approximatePosition.y, 2)
