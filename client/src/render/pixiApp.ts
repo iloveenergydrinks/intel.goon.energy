@@ -39,7 +39,7 @@ export async function createScene(canvasParent: HTMLElement, width = 1600, heigh
   const hudBars = new Graphics()
   hudBars.position.set(8, 64)
   // Ring labels (world space)
-  const labelStyle = { fill: '#cfe8ff', fontFamily: 'monospace', fontSize: 11, dropShadow: false }
+  const labelStyle = { fill: '#cfe8ff', fontFamily: 'monospace', fontSize: 11 }
   const ambBase = new Text('Amb base', labelStyle)
   const ambEff = new Text('Amb', labelStyle)
   const pasBase = new Text('Pass base', labelStyle)
