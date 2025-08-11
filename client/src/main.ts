@@ -140,7 +140,6 @@ async function boot() {
     set({ player, prey, extras, timeMs: now })
 
     // detection params (SNR model)
-    const PX_PER_M = 1 / 40
     const arcDegNow = state.scan.passiveArcDegrees
     const ambientBaseM = state.scan.ambientRangeMeters
     const passiveBaseM = state.scan.passiveRangeMeters
@@ -154,7 +153,6 @@ async function boot() {
 
     // ambient
     const ambient = computeAmbientContacts(player, [prey, ...extras], {
-      PX_PER_M,
       ambientBaseMeters: ambientBaseM,
       passiveBaseMeters: passiveBaseM,
       activeBaseMeters: activeBaseM,
@@ -167,7 +165,6 @@ async function boot() {
 
     // passive
     const passive = computePassiveReturns(player, [prey, ...extras], {
-      PX_PER_M,
       ambientBaseMeters: ambientBaseM,
       passiveBaseMeters: passiveBaseM,
       activeBaseMeters: activeBaseM,
@@ -200,7 +197,6 @@ async function boot() {
     let active = state.detection.activeContacts
     if (shouldPing) {
       active = computeActiveContacts(player, [prey, ...extras], {
-        PX_PER_M,
         ambientBaseMeters: ambientBaseM,
         passiveBaseMeters: passiveBaseM,
         activeBaseMeters: activeBaseM,
