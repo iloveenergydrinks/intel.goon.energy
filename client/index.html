@@ -30,13 +30,13 @@
           <li><b>Passive Arc</b>: Q / E — This controls your directional scan.
             <ul style="margin:4px 0 0 16px;">
               <li>Arc width range: <b>30°–180°</b>.</li>
-              <li><b>Narrower arc</b> → <u>longer passive range</u> and <u>higher accuracy</u>; <b>wider arc</b> → more coverage but shorter range and fuzzier hits.</li>
-              <li>Range rule: at <b>30°</b>, Passive effective range ≈ your <b>Active base</b>; at <b>180°</b>, Passive effective range ≈ your <b>Passive base</b>.</li>
-              <li>Accuracy: returns have a positional error that scales ~<b>100–500 m</b> from narrow→wide arcs.</li>
-              <li>Cost: each Passive return emits a small <b>reveal bubble</b>. Bubble size grows with arc width (wider arc = bigger bubble). Internally throttled ~<b>1.2 s</b>.</li>
+              <li><b>Narrower arc</b> → higher listening gain (detect farther) and smaller error; <b>wider arc</b> → more coverage but shorter reach and fuzzier hits.</li>
+              <li><b>No fixed range</b>: detections happen when received signal passes a threshold (based on distance, target loudness/size, and arc gain).</li>
+              <li>Accuracy: error shrinks as signal-to-noise improves (closer, louder target, or narrower arc).</li>
+              <li>Cost: each Passive return emits a small <b>reveal bubble</b>. Bubble size grows with arc width. Internally throttled ~<b>1.2 s</b>.</li>
             </ul>
           </li>
-          <li><b>Active Ping</b>: Space — Emits a pulse revealing <b>exact</b> positions within your Active effective range.
+          <li><b>Active Ping</b>: Space — Emits a pulse revealing <b>exact</b> positions when the return passes the threshold (stronger up close, weaker far away).
             <ul style="margin:4px 0 0 16px;">
               <li><b>Cooldown</b>: ~<b>5 s</b> (see HUD bar). Contacts remain visible ~<b>1.2 s</b>.</li>
               <li><b>Risk</b>: creates a <b>large reveal bubble</b> and briefly spikes your NI (you become much easier to detect).</li>
@@ -50,35 +50,19 @@
         <div style="margin:8px 0 8px 0;">
           <div style="margin:0 0 4px 0;"><b>Visuals</b></div>
           <ul style="margin:0 0 6px 18px; padding:0;">
-            <li>Rings: Base ranges (thin) and <i>max-if-loud</i> ranges (brighter) for Ambient, Passive, Active. Labels are shown near the rings.</li>
-            <li>Ring labels:
-              <ul style="margin:4px 0 6px 16px; padding:0;">
-                <li><b>Amb base</b>: Guaranteed Ambient hint radius; ignores arc; not NI-scaled.</li>
-                <li><b>Amb (active)</b>: Current effective Ambient radius vs target NI/size (capped).</li>
-                <li><b>Pass base</b>: Baseline Passive radius (wide-arc baseline; before arc/NI effects).</li>
-                <li><b>Pass (active)</b>: Current Passive radius after arc boost and NI/size scaling; wedge-only.</li>
-                <li><b>Act base</b>: Baseline Active ping radius (minimum exact-reveal reach).</li>
-                <li><b>Act (active)</b>: Current effective Active ping radius vs target NI/size (capped).</li>
-              </ul>
-            </li>
-            <li>Arc wedge: Passive field-of-view; effective Passive ring grows as you narrow the Arc</li>
+            <li>Rings: <b>reference</b> Ambient/Passive/Active radii (thin). Real detection uses thresholds, so you can sometimes detect past a ring (loud target, narrow arc) or inside it (quiet target, cover).</li>
+            <li>Arc wedge: Passive field-of-view; detections occur inside the wedge when the signal crosses threshold.</li>
             <li>Breadcrumbs: <span style="color:#79c6ff">blue</span> = passive (approximate), <span style="color:#ffc04d">orange</span> = decoys</li>
             <li>Red circles: reveal bubbles — small (Passive ticks), large (Active ping)</li>
           </ul>
         </div>
         <div style="margin:8px 0 0 0;">
-          <div style="margin:0 0 4px 0;"><b>Scanning & Hybrid Detectability</b></div>
+          <div style="margin:0 0 4px 0;"><b>Scanning & Detectability (Threshold Model)</b></div>
           <ul style="margin:0 0 6px 18px; padding:0;">
-            <li><b>Ambient</b> (always on): short-range hints of <i>loud</i> targets; ignores Arc. Base ≈ your Ambient ring; louder targets can be heard up to the <i>Amb max-if-loud</i> ring.</li>
-            <li><b>Passive</b> (Arc): returns fuzzy positions inside the wedge only. Narrower arc increases the <i>Pass effective</i> ring and reduces error. Hits drop <b>blue breadcrumbs</b> (~8 s).</li>
-            <li><b>Active</b> (Ping): exact positions for a moment; large reveal pulse; obeys cooldown. Use to confirm and commit.</li>
-            <li><b>Hybrid model</b> (what the rings mean):
-              <ul style="margin:4px 0 0 16px;">
-                <li><b>Base rings</b> (thin) = guaranteed minimum range.</li>
-                <li><b>Max-if-loud rings</b> (brighter) = potential reach vs a <i>loud</i> target. Effective range scales with target NI (roughly a square-root curve) and is capped per layer (Amb ~1.5×, Pass ~1.75×, Act ~2.0× base).</li>
-                <li>Environmental zones reduce target NI, shrinking your effective reach; thrust/weapons/pings increase NI, extending it.</li>
-              </ul>
-            </li>
+            <li><b>Ambient</b> (always on): hint appears when NI×size ÷ distance² clears a threshold. Ignores arc.</li>
+            <li><b>Passive</b> (Arc): inside the wedge, a return appears when (NI×size×arc gain) ÷ distance² clears a threshold. Narrower arc = higher gain and smaller error. Drops <b>blue breadcrumbs</b> (~8 s).</li>
+            <li><b>Active</b> (Ping): exact positions when two-way strength (∝ 1/distance⁴) clears a threshold; large reveal pulse; cooldown applies.</li>
+            <li><b>Cover and noise</b>: zones reduce NI (harder to detect); thrust/weapons/pings raise NI (easier to detect).</li>
           </ul>
         </div>
         <p style="margin:8px 0 0 0;"><b>Tips</b>: Sweep wide to find direction, narrow Arc to triangulate, then Ping. Use zones (shadows/thermal/clutter) to cut NI and break locks.</p>
