@@ -41,7 +41,8 @@ async function boot() {
     const s = get()
     for (const ship of s.availableShips) {
       const btn = document.createElement('button')
-      btn.textContent = `${ship.name} — SPD ${ship.maxSpeed}  Noise ${ship.baseNoise.toFixed(2)}  P ${Math.round(ship.passiveRangeMeters/1000)}km  A ${Math.round(ship.activeRangeMeters/1000)}km`
+      btn.textContent = `${ship.name} — SPD ${ship.maxSpeed}  NI base ${ship.baseNoise.toFixed(2)}  P ref ${Math.round(ship.passiveRangeMeters/1000)}km  A ref ${Math.round(ship.activeRangeMeters/1000)}km`
+      btn.title = 'P/A are reference distances. Actual detection uses thresholds (target loudness/size, arc, and distance).'
       btn.style.cssText = 'background:#122035;color:#cfe8ff;border:1px solid #1f2a44;border-radius:6px;padding:8px 10px;text-align:left;cursor:pointer;'
       btn.onmouseenter = () => (btn.style.background = '#172844')
       btn.onmouseleave = () => (btn.style.background = '#122035')
