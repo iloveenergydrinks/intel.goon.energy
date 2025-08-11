@@ -179,7 +179,7 @@ async function boot() {
       const throttleMs = 1200
       if (!state.scan.lastPassiveRevealAt || now - state.scan.lastPassiveRevealAt > throttleMs) {
         // Wider arc = bigger reveal bubble cost
-        const radius = (state.scan.passiveRevealRadiusMeters / 40) * (arcDegNow / maxArc)
+        const radius = (state.scan.passiveRevealRadiusMeters / 40) * (arcDegNow / state.scan.passiveArcMaxDegrees)
         bubbles.push(createRevealBubble(player, radius, 800))
         set({ scan: { ...state.scan, lastPassiveRevealAt: now } })
       }
