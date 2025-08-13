@@ -166,7 +166,7 @@ async function boot() {
       passiveArcMinDegrees: state.scan.passiveArcMinDegrees,
       passiveMinErrorMeters: PASSIVE_MIN_ERR_M,
       passiveMaxErrorMeters: PASSIVE_MAX_ERR_M,
-    })
+    }, state.obstacles)
 
     // passive (bearing-only)
     const passive = computePassiveReturns(player, [prey, ...extras], {
@@ -178,7 +178,7 @@ async function boot() {
       passiveArcMinDegrees: state.scan.passiveArcMinDegrees,
       passiveMinErrorMeters: PASSIVE_MIN_ERR_M,
       passiveMaxErrorMeters: PASSIVE_MAX_ERR_M,
-    })
+    }, state.obstacles)
     // passive no longer emits reveal bubbles nor leaves breadcrumbs (bearing-only intel)
 
     // active ping handling: queue on keydown, consume after cooldown; NI spike visual
@@ -196,7 +196,7 @@ async function boot() {
         passiveArcMinDegrees: state.scan.passiveArcMinDegrees,
         passiveMinErrorMeters: PASSIVE_MIN_ERR_M,
         passiveMaxErrorMeters: PASSIVE_MAX_ERR_M,
-      })
+      }, state.obstacles)
       bubbles.push(createRevealBubble(player, state.scan.activeRevealRadiusMeters / 40, 1500))
       // NI spike when pinging (briefly)
       player.niSmooth = Math.min(1.5, player.niSmooth + 0.6)
@@ -266,8 +266,10 @@ async function boot() {
     drawShip(scene.playerGfx, gs.player.position.x, gs.player.position.y, gs.player.headingRadians, true)
     // Only draw prey if within active reveal window or inside ambient proximity (using latest state)
     const det = gs.detection
-    const preyVisible = ((det.activeContacts.length > 0) && (now < (det.activeContactsExpiresAtMs || 0))) ||
-      Math.hypot(gs.player.position.x - gs.prey.position.x, gs.player.position.y - gs.prey.position.y) < (gs.scan.ambientRangeMeters / 40)
+    const preyVisible = (
+      (det.activeContacts.some(c => c.id === gs.prey.id) && (now < (det.activeContactsExpiresAtMs || 0))) ||
+      det.ambientContacts.some(a => a.id === gs.prey.id)
+    )
     if (preyVisible) {
       drawShip(scene.preyGfx, gs.prey.position.x, gs.prey.position.y, gs.prey.headingRadians, false)
     } else {

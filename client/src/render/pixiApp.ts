@@ -183,26 +183,33 @@ export function drawRadar(gfx: Graphics, state: GameState) {
   const arcDeg = state.scan.passiveArcDegrees
   const start = player.headingRadians - (arcDeg * Math.PI) / 180 / 2
   const end = player.headingRadians + (arcDeg * Math.PI) / 180 / 2
-  // filled wedge
-  gfx.moveTo(player.position.x, player.position.y)
+  // Raycast-limited wedge: clip the wedge by obstacles visually
+  const originX = player.position.x
+  const originY = player.position.y
+  const points: Array<{ x: number; y: number }> = []
   for (let t = 0; t <= 1.001; t += 0.03) {
     const ang = start + (end - start) * t
-    gfx.lineTo(player.position.x + Math.cos(ang) * arcRadius, player.position.y + Math.sin(ang) * arcRadius)
+    const dist = Math.min(arcRadius, raycastDistanceToObstacles(originX, originY, ang, arcRadius, state.obstacles))
+    points.push({ x: originX + Math.cos(ang) * dist, y: originY + Math.sin(ang) * dist })
   }
+  // filled wedge
+  gfx.moveTo(originX, originY)
+  for (const p of points) gfx.lineTo(p.x, p.y)
   gfx.closePath()
   gfx.fill({ color: 0x4da3ff, alpha: 0.12 })
-  // boundary rays
-  gfx.moveTo(player.position.x, player.position.y)
-  gfx.lineTo(player.position.x + Math.cos(start) * arcRadius, player.position.y + Math.sin(start) * arcRadius)
-  gfx.moveTo(player.position.x, player.position.y)
-  gfx.lineTo(player.position.x + Math.cos(end) * arcRadius, player.position.y + Math.sin(end) * arcRadius)
-  // arc outline
-  gfx.moveTo(player.position.x + Math.cos(start) * arcRadius, player.position.y + Math.sin(start) * arcRadius)
-  for (let t = 0; t <= 1.001; t += 0.03) {
-    const ang = start + (end - start) * t
-    gfx.lineTo(player.position.x + Math.cos(ang) * arcRadius, player.position.y + Math.sin(ang) * arcRadius)
+  // boundary rays limited by raycast
+  const startDist = Math.min(arcRadius, raycastDistanceToObstacles(originX, originY, start, arcRadius, state.obstacles))
+  const endDist = Math.min(arcRadius, raycastDistanceToObstacles(originX, originY, end, arcRadius, state.obstacles))
+  gfx.moveTo(originX, originY)
+  gfx.lineTo(originX + Math.cos(start) * startDist, originY + Math.sin(start) * startDist)
+  gfx.moveTo(originX, originY)
+  gfx.lineTo(originX + Math.cos(end) * endDist, originY + Math.sin(end) * endDist)
+  // arc outline following clipped points
+  if (points.length > 0) {
+    gfx.moveTo(points[0].x, points[0].y)
+    for (const p of points) gfx.lineTo(p.x, p.y)
+    gfx.stroke({ color: 0x79c6ff, alpha: 0.6, width: 2 })
   }
-  gfx.stroke({ color: 0x79c6ff, alpha: 0.6, width: 2 })
 }
 
 export function updateRadarLabels(labels: { ambBase: Text; ambEff: Text; pasBase: Text; pasEff: Text; actBase: Text; actEff: Text }, state: GameState) {
@@ -272,5 +279,45 @@ export function updateCamera(world: Container, viewportWidth: number, viewportHe
   wx = Math.min(0, Math.max(minX, wx))
   wy = Math.min(0, Math.max(minY, wy))
   world.position.set(wx, wy)
+}
+
+// Liang-Barsky segment vs axis-aligned rectangle intersection to get first hit distance
+function raycastDistanceToObstacles(ox: number, oy: number, angle: number, maxDist: number, rects: ObstacleRect[]): number {
+  const dx = Math.cos(angle) * maxDist
+  const dy = Math.sin(angle) * maxDist
+  let bestU = Infinity
+  for (const r of rects) {
+    const u = intersectSegmentAABB(ox, oy, ox + dx, oy + dy, r)
+    if (u != null && u >= 0 && u <= 1 && u < bestU) bestU = u
+  }
+  if (!isFinite(bestU)) return maxDist
+  const segLen = Math.hypot(dx, dy)
+  return bestU * segLen
+}
+
+function intersectSegmentAABB(x0: number, y0: number, x1: number, y1: number, rect: ObstacleRect): number | null {
+  const dx = x1 - x0
+  const dy = y1 - y0
+  let u1 = 0
+  let u2 = 1
+  const p = [-dx, dx, -dy, dy]
+  const q = [x0 - rect.x, rect.x + rect.width - x0, y0 - rect.y, rect.y + rect.height - y0]
+  for (let i = 0; i < 4; i++) {
+    const pi = p[i]
+    const qi = q[i]
+    if (Math.abs(pi) < 1e-9) {
+      if (qi < 0) return null // parallel and outside
+    } else {
+      const t = qi / pi
+      if (pi < 0) {
+        if (t > u2) return null
+        if (t > u1) u1 = t
+      } else {
+        if (t < u1) return null
+        if (t < u2) u2 = t
+      }
+    }
+  }
+  return u1
 }
 
